@@ -17,6 +17,7 @@
 		"db:studio": "drizzle-kit studio"
 	},
 	"devDependencies": {
+		"@carbon/charts-svelte": "^1.22.18",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@sveltejs/adapter-vercel": "^5.5.2",
@@ -41,10 +42,12 @@
 		"vite": "^6.0.0"
 	},
 	"dependencies": {
+		"@lucide/svelte": "^0.482.0",
 		"@node-rs/argon2": "^2.0.2",
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
 		"drizzle-orm": "^0.40.0",
+		"papaparse": "^5.5.2",
 		"postgres": "^3.4.5"
 	}
 }

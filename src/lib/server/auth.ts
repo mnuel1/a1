@@ -17,12 +17,15 @@ export function generateSessionToken() {
 
 export async function createSession(token: string, userId: string) {
 	const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
+
 	const session: table.Session = {
 		id: sessionId,
-		userId,
+		userID: userId,
 		expiresAt: new Date(Date.now() + DAY_IN_MS * 30)
 	};
+	
 	await db.insert(table.session).values(session);
+
 	return session;
 }
 
@@ -31,11 +34,11 @@ export async function validateSessionToken(token: string) {
 	const [result] = await db
 		.select({
 			// Adjust user table here to tweak returned data
-			user: { id: table.user.id, username: table.user.username },
+			user: { id: table.user.id, loginID: table.user.loginID },
 			session: table.session
 		})
 		.from(table.session)
-		.innerJoin(table.user, eq(table.session.userId, table.user.id))
+		.innerJoin(table.user, eq(table.session.userID, table.user.id))
 		.where(eq(table.session.id, sessionId));
 
 	if (!result) {
