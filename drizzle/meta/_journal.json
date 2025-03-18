@@ -15,6 +15,34 @@
       "when": 1742120418096,
       "tag": "0001_bouncy_magdalene",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1742265233504,
+      "tag": "0002_omniscient_starjammers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1742265622880,
+      "tag": "0003_legal_master_chief",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1742275770497,
+      "tag": "0004_mushy_pixie",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1742276029373,
+      "tag": "0005_lethal_odin",
+      "breakpoints": true
     }
   ]
 }

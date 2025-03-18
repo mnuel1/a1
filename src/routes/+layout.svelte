@@ -8,24 +8,24 @@
 	
 	let { children, data } = $props();
 	
+	console.log(data)
 </script>
 
 <Toast />
 
 <main class="bg-background dark:bg-background-dark 
 	text-font-light dark:text-font-dark transition
-	delay-150 font-main">
+	delay-150 font-main flex w-full h-full">
 	
-	{#if data}
-		<div class="flex">
+	{#if data.user}
+		<div class="flex px-4 gap-4 w-full ">
 			<Sidebar />
-			{@render children()}
+			<div class="min-h-screen bg-white rounded-md w-full">
+				{@render children()}
+			</div>
 		</div>
 	{:else}
-		<!-- Show a loading spinner or message if data is unavailable -->
-		<div class="flex justify-center items-center h-screen">
-			<p class="text-gray-500 text-lg">Loading...</p>
-		</div>
+		{@render children()}
 	{/if}
 
 </main>

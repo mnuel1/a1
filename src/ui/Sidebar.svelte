@@ -28,16 +28,15 @@
     });
 </script>
 
-<div class="flex">
-    <!-- ✅ Sidebar -->
+<div class="flex h-full">
     <aside 
-        class="h-screen bg-[white] dark:bg-gray-900 border-r 
+        class="h-full bg-[white] dark:bg-gray-900 border-r 
         border-gray-200 dark:border-gray-700 transition-all 
-        duration-300 shadow-xl p-2"
+        duration-300 shadow-xl p-2 rounded-lg"
         class:!w-[60px]={!$isExpanded}
         class:!w-[250px]={$isExpanded}>
 
-        <!-- ✅ Sidebar Header -->
+
         <div 
             class="flex items-center justify-between p-4"
             class:justify-center={!$isExpanded}>
@@ -49,7 +48,7 @@
             </button>
         </div>
 
-        <!-- ✅ Navigation Links -->
+
         <nav class="mt-5 flex flex-col gap-2">
             {#each navLinks as link}
                 <a 

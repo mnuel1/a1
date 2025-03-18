@@ -1,0 +1,342 @@
+{
+  "id": "0bf628ae-c749-40ec-8ac5-9a817b49993c",
+  "prevId": "0b973f50-e02f-41a1-82e5-3542778e5be8",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.deliveries": {
+      "name": "deliveries",
+      "schema": "",
+      "columns": {
+        "delivery_id": {
+          "name": "delivery_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "shipment_id": {
+          "name": "shipment_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tracking_number": {
+          "name": "tracking_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "qty": {
+          "name": "qty",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "barcode_no": {
+          "name": "barcode_no",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "agent": {
+          "name": "agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shipper_name": {
+          "name": "shipper_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shipper_ctc": {
+          "name": "shipper_ctc",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consignee": {
+          "name": "consignee",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consignee_address": {
+          "name": "consignee_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consignee_ctc": {
+          "name": "consignee_ctc",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_by": {
+          "name": "received_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination": {
+          "name": "destination",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_out_for_delivery": {
+          "name": "date_out_for_delivery",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "delivery_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_received": {
+          "name": "date_received",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "deliveries_shipment_id_shipments_shipment_id_fk": {
+          "name": "deliveries_shipment_id_shipments_shipment_id_fk",
+          "tableFrom": "deliveries",
+          "tableTo": "shipments",
+          "columnsFrom": [
+            "shipment_id"
+          ],
+          "columnsTo": [
+            "shipment_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "deliveries_tracking_number_unique": {
+          "name": "deliveries_tracking_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tracking_number"
+          ]
+        },
+        "deliveries_barcode_no_unique": {
+          "name": "deliveries_barcode_no_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "barcode_no"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.session": {
+      "name": "session",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "session_user_id_user_id_fk": {
+          "name": "session_user_id_user_id_fk",
+          "tableFrom": "session",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.shipments": {
+      "name": "shipments",
+      "schema": "",
+      "columns": {
+        "shipment_id": {
+          "name": "shipment_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "shipment_number": {
+          "name": "shipment_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "container_number": {
+          "name": "container_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_boxes": {
+          "name": "total_boxes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unloading_date": {
+          "name": "unloading_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "shipments_shipment_number_unique": {
+          "name": "shipments_shipment_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "shipment_number"
+          ]
+        },
+        "shipments_container_number_unique": {
+          "name": "shipments_container_number_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "container_number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user": {
+      "name": "user",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "login_id": {
+          "name": "login_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_login_id_unique": {
+          "name": "user_login_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "login_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.delivery_status": {
+      "name": "delivery_status",
+      "schema": "public",
+      "values": [
+        "OUT FOR DELIVERY",
+        "DELIVERED",
+        "BACKLOAD",
+        "PRIORITY",
+        "NEGATIVE / FOR DOUBLE CHECKING",
+        "HOLD",
+        "DISPATCH-PROVINCE"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

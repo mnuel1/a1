@@ -13,7 +13,7 @@
     if (form?.errorMsg) {
       showToast(form.errorMsg);
     }
-});
+	});
 
 
 </script>
@@ -33,7 +33,11 @@
 				Login
 			</h2>
   
-			<form method="post" action="?/login" use:enhance class="space-y-4 mt-4">
+			<form 
+				method="post" 
+				action="?/login" 
+				use:enhance 
+				class="space-y-4 mt-4">
 				
 				<Input
 					type="text"
