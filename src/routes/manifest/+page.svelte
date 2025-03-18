@@ -1,6 +1,5 @@
 <script lang="ts">
     import { dropzone } from "@sveu/actions";
-    import { ChevronRight, ChevronLeft } from "@lucide/svelte";
     import * as XLSX from "xlsx";
     import { showToast } from '../../stores/toast';
 
@@ -8,30 +7,7 @@
     let filesData: any[] = []; // Holds parsed Excel data
     let filteredData: any[] = []; // Holds filtered data after search/filter
     let searchQuery = "";
-    let currentPage = 1;
-    const rowLimit = 5;
-    let totalPages = 1;
-    let selectedStatus = "";
-    let sortBy = "city";
-
-    // ✅ Mapping of cities to regions in PH
-    const cityToRegionMap = {
-        "Manila": "NCR",
-        "Makati": "NCR",
-        "Quezon City": "NCR",
-        "Cebu": "Region VII",
-        "Davao": "Region XI",
-        "Taguig": "NCR",
-        "Pasig": "NCR",
-        "Baguio": "CAR",
-        "Iloilo": "Region VI",
-        "Zamboanga": "Region IX",
-        "Cagayan de Oro": "Region X"
-    };
-
-
-    // ✅ Reactive block to update total pages
-    $: totalPages = Math.ceil(filteredData.length / rowLimit) || 1;
+    let hasSearched = false; // Track if a search has been performed
 
     function hover(data: CustomEvent<boolean>) {
         overDropzone = data.detail;
@@ -47,10 +23,9 @@
                 try {
                     const excelData = await readExcelFile(file);
                     filesData = excelData;
-                    applyFilters(); // Apply initial filter and sort
-                    currentPage = 1; // Reset page after new file load
+                    showToast("File uploaded successfully!", 'success');
                 } catch (error) {
-                    console.log(error)
+                    console.log(error);
                     showToast("Something went wrong. File cannot be read", 'error');
                 }
             } else {
@@ -81,13 +56,13 @@
     }
 
     const columns = [
-        "NO.",
         "SHIPMENT NO.",
         "CONTAINER NO.",
         "TRACKING NO.",
         "NAME OF SENDER",
         "CONTACT NO.",
         "AGENT",
+        "AGENT2",
         "CONSIGNEE",
         "CONSIGNEE_ADDRESS",
         "CONTACT NO.",
@@ -97,71 +72,24 @@
         "STATUS"
     ];
 
-    // ✅ Reactive block for pagination data
-    $: paginatedData = getPaginatedData();
-
-    function getPaginatedData() {
-        const start = (currentPage - 1) * rowLimit;
-        const end = start + rowLimit;
-        return filteredData.slice(start, end);
-    }
-
-    function goToPage(page: number) {
-        if (page >= 1 && page <= totalPages) {
-            currentPage = page;
-        }
-    }
-
-    function setStatus(status) {
-      selectedStatus(status)
-    }
-
-    // ✅ Extract city from CONSIGNEE_ADDRESS
-    function getCityFromAddress(address: string): string {
-        const parts = address.split(",");
-        return parts.length > 1 ? parts[parts.length - 2].trim() : "Unknown";
-    }
-
-    // ✅ Get region from city
-    function getRegionFromCity(city: string): string {
-        return cityToRegionMap[city] || "Unknown";
-    }
-
-    // ✅ Apply filters and sort
     function applyFilters() {
+        if (searchQuery.trim() === "") {
+            hasSearched = false;
+            filteredData = [];
+            return;
+        }
+
         let data = [...filesData];
 
-        // Apply search
-        if (searchQuery.trim() !== "") {
-            data = data.filter((row) =>
-                Object.values(row).some((val) =>
-                    String(val).toLowerCase().includes(searchQuery.toLowerCase())
-                )
-            );
-        }
-
-        // Apply status filter
-        if (selectedStatus) {
-            data = data.filter((row) => row["STATUS"] === selectedStatus);
-        }
-
-        // Group and sort by city or region
-        // data = groupAndSortData(data, sortBy);
+        // Apply search only to specific columns
+        data = data.filter((row) =>
+            ["NAME OF SENDER", "TRACKING NO.", "BARCODE"].some((key) =>
+                String(row[key]).toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        );
 
         filteredData = data;
-        currentPage = 1;
-    }
-
-    function groupAndSortData(data, key) {
-        // Group by city or region and sort alphabetically
-        return data.sort((a, b) => {
-            let valueA = key === "CONSIGNEE_ADDRESS" ? getCityFromAddress(a["CONSIGNEE_ADDRESS"]) : getRegionFromCity(getCityFromAddress(a["CONSIGNEE_ADDRESS"]));
-            let valueB = key === "CONSIGNEE_ADDRESS" ? getCityFromAddress(b["CONSIGNEE_ADDRESS"]) : getRegionFromCity(getCityFromAddress(b["CONSIGNEE_ADDRESS"]));
-
-            if (valueA < valueB) return -1;
-            if (valueA > valueB) return 1;
-            return 0;
-        });
+        hasSearched = true;
     }
 </script>
 
@@ -173,29 +101,17 @@
             <input
                 type="text"
                 bind:value={searchQuery}
-                placeholder="Search..."
-                class="p-2 w-1/3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Search by Name, Tracking No. or Barcode..."
+                class="p-2 w-1/3 border border-gray-300 rounded-lg 
+                focus:outline-none focus:ring-2 focus:ring-primary text-xs"
                 on:input={applyFilters}
             />
-        
-            <select
-                bind:value={sortBy}
-                on:change={applyFilters}
-                class="p-2 border border-gray-300 rounded-lg focus:outline-none"
-            >
-                <option value="CONSIGNEE_ADDRESS">Sort by City</option>
-                <option value="REGION">Sort by Region</option>
-            </select>
         </div>
-        <div class="flex gap-2">
-        <button class="font-medium border-b border-primary cursor-pointer"> OUT FOR DELIVERY </button>
-        <button class="font-medium border-b border-primary cursor-pointer"> DELIVERED </button>
-        <button class="font-medium border-b border-primary cursor-pointer"> BACKLOAD </button>
-        <button class="font-medium border-b border-primary cursor-pointer"> PRIORITY </button>
-        <button class="font-medium border-b border-primary cursor-pointer"> NEGATIVE / FOR DOUBLE CHECKING </button>
-        <button class="font-medium border-b border-primary cursor-pointer"> HOLD </button>
-        <button class="font-medium border-b border-primary cursor-pointer"> DISPATCH-PROVINCE </button>
-        </div>
+
+        <h3 class="text-sm text-red-700 px-1"> 
+            Note: Drag and drop the manifest Excel file to upload and add the new manifest to the database.
+        </h3>
+
         <div
             use:dropzone
             on:hover="{hover}"
@@ -204,77 +120,54 @@
         >
             <!-- Overlay animation when hovering over dropzone -->
             {#if overDropzone}
-                <div class="absolute inset-0 bg-gray-100/50 bg-opacity-50 
-                  flex items-center justify-center transition-opacity duration-300
-                  border-4 border-dashed border-gray-700/50
-                  ">
-                    <p class="text-black text-lg font-semibold animate-pulse">Drop Excel File</p>
+                <div
+                    class="absolute inset-0 bg-gray-100/50 bg-opacity-50 
+                    flex items-center justify-center transition-opacity duration-300
+                    border-4 border-dashed border-gray-700/50"
+                >
+                    <p class="text-black text-lg font-semibold animate-pulse">
+                        Drop Excel File
+                    </p>
                 </div>
             {/if}
 
-            <!-- Table with parsed Excel data -->
-            <table class="table-auto w-full border-collapse border border-gray-100 mt-2 rounded-lg">
-                <thead class="bg-gray-100/50">
-                    <tr>
-                        {#each columns as col}
-                            <th class="text-xs font-medium text-black p-3 text-center">
-                                {col}
-                            </th>
-                        {/each}
-                    </tr>
-                </thead>
+            <!-- Show results only after searching -->
+            {#if hasSearched && filteredData.length > 0}
+                <div class="space-y-4 mt-2">
+                    {#each filteredData as row, i}
+                        <div
+                            class="p-4 border border-gray-200 rounded-lg shadow-sm bg-white hover:bg-primary/5 transition-all"
+                        >
+                            <h3 class="text-lg font-semibold text-primary">
+                                {row["NAME OF SENDER"] || "Unknown"}
+                            </h3>
+                            <p class="text-sm text-gray-500">
+                                <strong>Tracking No:</strong> {row["TRACKING NO."] || "N/A"} | 
+                                <strong>Barcode:</strong> {row["BARCODE"] || "N/A"}
+                            </p>
 
-                <tbody>
-                    {#if getPaginatedData().length > 0}
-                        {#each getPaginatedData() as row, i}
-                            <tr class="{i % 2 !== 0 ? 'bg-gray-100/50' : 'bg-white'} hover:bg-primary/10 cursor-pointer transition delay-25">
-                                {#each Object.values(row) as value}
-                                    <td class="text-xs font-normal text-black p-3 text-center">
-                                        {value}
-                                    </td>
+                            <div class="grid grid-cols-2 gap-4 mt-3">
+                                {#each columns as col}
+                                    <div class="flex items-start space-x-2">
+                                        <span class="font-medium text-gray-700 text-sm">{col}:</span>
+                                        <span class="text-gray-600 text-sm">{row[col] || "-"}</span>
+                                    </div>
                                 {/each}
-                            </tr>
-                        {/each}
-                    {/if}
-                </tbody>
-            </table>
-            {#if filteredData.length <= 0}
-                <div class="flex items-center justify-center h-40 text-gray-500">
-                    {"There's no data yet :( . You can drop your excel file to add your records :)"}.
+                            </div>
+                        </div>
+                    {/each}
                 </div>
             {/if}
 
-            {#if filteredData.length > rowLimit}
-                <div class="flex justify-center items-center mt-4 space-x-2">
-                    <!-- Previous Page Button -->
-                    <button
-                        on:click={() => goToPage(Number(currentPage - 1))}
-                        class="px-3 py-2 border border-gray-300 rounded-md text-xs
-                        {currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary cursor-pointer'}"
-                        disabled={currentPage === 1}
-                    >
-                        <ChevronLeft size={10} />
-                    </button>
+            {#if hasSearched && filteredData.length === 0}
+                <div class="flex items-center justify-center h-40 text-gray-500">
+                    {"No matching records found. Try another search."}
+                </div>
+            {/if}
 
-                    <!-- Page Input Field -->
-                    <input
-                        type="number"
-                        bind:value={currentPage}
-                        on:change={() => goToPage(Number(currentPage))}
-                        min="1"
-                        max={totalPages}
-                        class="w-10 px-2 py-1 border border-gray-300 rounded-md text-center focus:outline-none"
-                    />
-                    <span class="text-sm text-gray-600">/ {totalPages}</span>
-
-                    <button
-                        on:click={() => goToPage(Number(currentPage + 1))}
-                        class="px-3 py-2 border border-gray-300 rounded-md text-xs 
-                        {currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary cursor-pointer'}"
-                        disabled={currentPage === totalPages}
-                    >
-                        <ChevronRight size={10} />
-                    </button>
+            {#if !hasSearched}
+                <div class="flex items-center justify-center h-40 text-gray-500">
+                    {"Search to display data."}
                 </div>
             {/if}
         </div>

@@ -16,7 +16,6 @@
         { name: "Dashboard", href: "/dashboard", icon: Home },
         { name: "Manifest", href: "/manifest", icon: FileSpreadsheet },
         { name: "Profile", href: "#", icon: User },        
-        { name: "Log out", href: "/auth/logout", icon: LogOut }
     ];
 
     // Store the current path
@@ -63,12 +62,20 @@
                     {#if $isExpanded}
                         <span class="text-sm font-medium transition-opacity">{link.name}</span>
                     {/if}
-                </a>
-                
-                {#if link.name === "Profile"}
-                    <hr class="text-gray-300" />
-                {/if}
+                </a>                
             {/each}
+            <form method="POST" action="/auth/logout" class="inline">
+                <button 
+                    type="submit" 
+                    class="flex w-full cursor-pointer items-center gap-3 p-3 rounded-lg transition-all duration-300 hover:bg-primary hover:text-font-dark"
+                    class:justify-center={!$isExpanded}>
+                    <LogOut size={20}/>
+                    {#if $isExpanded}
+                        <span class="text-sm font-medium transition-opacity">Log out</span>
+                    {/if}
+                </button>
+            </form>
+
         </nav>
     </aside>
 </div>

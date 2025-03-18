@@ -25,7 +25,9 @@
 			</div>
 		</div>
 	{:else}
-		{@render children()}
+		<div class="w-full">
+			{@render children()}
+		</div>
 	{/if}
 
 </main>
