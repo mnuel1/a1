@@ -1,5 +1,6 @@
-import { hash, verify } from '@node-rs/argon2';
-import { encodeBase32LowerCase } from '@oslojs/encoding';
+// import { hash, verify } from '@node-rs/argon2';
+import { verify } from '@node-rs/argon2';
+// import { encodeBase32LowerCase } from '@oslojs/encoding';
 import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import * as auth from '$lib/server/auth';
