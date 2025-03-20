@@ -45,14 +45,14 @@
 				<PieChart data={pieData} options={pieOption} />
 			</div>
 
-			<div class="bg-white p-6 rounded-lg shadow-md">
+			<!-- <div class="bg-white p-6 rounded-lg shadow-md">
 				<ChoroplethChart data={geoData} options={geoOption}/>
-			</div>
+			</div> -->
 
 		</div>
 
 		<div class="mt-6 bg-white p-6 rounded-lg shadow-md">
-			<AreaChart data={areaData} options={areaOption}/>
+			<!-- <AreaChart data={areaData} options={areaOption}/> -->
 		</div>
 	</main>
 </div>
