@@ -13,6 +13,28 @@
         overDropzone = data.detail;
     }
 
+    async function upload(data: any[]) {
+        try {
+            // Perform your upload logic here, e.g., an API request
+            const response = await fetch('/manifest/api', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ manifestData: data }),
+            });
+
+            if (response.ok) {
+                showToast("Data uploaded successfully!", 'success');
+            } else {
+                showToast("Failed to upload data.", 'error');
+            }
+        } catch (error) {
+            console.error("Upload error:", error);
+            showToast("Something went wrong during upload.", 'error');
+        }
+    }
+
     async function on_file_drop(data: CustomEvent<File[]>) {
         const files = data.detail;
 
@@ -23,16 +45,52 @@
                 try {
                     const excelData = await readExcelFile(file);
                     filesData = excelData;
-                    showToast("File uploaded successfully!", 'success');
+
+                    // Initialize variables
+                    let shipmentNo = "";
+                    let containerNo = "";
+                    let totalBoxes = "";
+                    
+                    // Loop through rows to find matching labels in any column
+                    for (const row of excelData) {
+                        const rowValues = Object.values(row).map((value) => value?.toString().trim());
+                        rowValues.forEach((value, index) => {
+                            if (value?.startsWith("SHIPMENT NUMBER :")) {
+                                shipmentNo = rowValues[index + 1]?.toString().trim() || "";
+                            } else if (value?.startsWith("CONTAINER NUMBER :")) {
+                                containerNo = rowValues[index + 1]?.toString().trim() || "";
+                            } else if (value?.startsWith("TOTAL NUMBER OF BOXES :")) {
+                                totalBoxes = rowValues[index + 1]?.toString().trim() || "";
+                            }
+                        });
+                    }
+                    
+                    // Check if required fields are extracted
+                    if (shipmentNo && containerNo) {
+                        // Pass extracted values to upload
+                        console.log(shipmentNo, containerNo, totalBoxes)
+                        const data = {
+                            manifestData: excelData,
+                            shipmentNo,
+                            containerNo,
+                            totalBoxes,
+                        }
+                        await upload(data);
+                        showToast("File uploaded successfully!", "success");
+                    } else {
+                        showToast("SHIPMENT NUMBER or CONTAINER NUMBER not found.", "error");
+                    }
                 } catch (error) {
                     console.log(error);
-                    showToast("Something went wrong. File cannot be read", 'error');
+                    showToast("Something went wrong. File cannot be read.", "error");
                 }
             } else {
-                showToast("Invalid file format. Please upload an Excel file.", 'error');
+                showToast("Invalid file format. Please upload an Excel file.", "error");
             }
         }
     }
+
+
 
     async function readExcelFile(file: File): Promise<any[]> {
         return new Promise((resolve, reject) => {
