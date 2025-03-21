@@ -1,0 +1,1 @@
+ALTER TABLE "deliveries" ADD COLUMN "agent2" text DEFAULT 'Not yet set.';

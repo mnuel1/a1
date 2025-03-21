@@ -9,6 +9,7 @@
     --color-font-light: oklch(10.81% 0.015 37.87);
     --color-background: oklch(97.02% 0.000 89.88);
     --color-primary: oklch(52.88% 0.179 23.51);
+    --color-primary-hover: oklch(42% 0.179 23.51);
     --color-secondary: oklch(88.42% 0.107 106.64);
     --color-accent: oklch(82.30% 0.148 126.12);
 

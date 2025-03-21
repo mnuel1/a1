@@ -1,4 +1,5 @@
 <script>
+	import { page } from '$app/stores';
 	import { writable } from 'svelte/store';
 	import { onMount } from 'svelte';
 	import { Home, User, Menu, LogOut, FileSpreadsheet } from '@lucide/svelte';
@@ -6,14 +7,17 @@
 	// Sidebar state (expanded or collapsed)
 	let isExpanded = writable(true);
 
-	import { page } from '$app/stores';
+	const toggleSidebar = () => {
+        isExpanded.update(val => !val);
+    };
+	
 
 	$: currentPath.set($page.url.pathname);
 
 	// Navigation links array
 	const navLinks = [
-		{ name: 'Dashboard', href: '/dashboard', icon: Home },
 		{ name: 'Manifest', href: '/manifest', icon: FileSpreadsheet },
+        { name: 'Dashboard', href: '/dashboard', icon: Home },
 		{ name: 'Profile', href: '#', icon: User }
 	];
 	let currentPath = writable('');

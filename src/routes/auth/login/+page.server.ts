@@ -49,7 +49,7 @@ export const actions: Actions = {
 		const session = await auth.createSession(sessionToken, existingUser.id);
 		auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
 
-		return redirect(302, '/dashboard');
+		return redirect(302, '/manifest');
 	},
 	// register: async (event) => {
 	// 	const formData = await event.request.formData();

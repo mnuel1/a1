@@ -10,9 +10,9 @@
 	let { form }: { form: ActionData } = $props();
 	
 	$effect(() => {
-    if (form?.errorMsg) {
-      showToast(form.errorMsg);
-    }
+		if (form?.errorMsg) {
+			showToast(form.errorMsg);
+		}
 	});
 
 

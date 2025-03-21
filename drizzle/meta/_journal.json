@@ -43,6 +43,27 @@
       "when": 1742276029373,
       "tag": "0005_lethal_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1742517346012,
+      "tag": "0006_slippery_colossus",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1742531092271,
+      "tag": "0007_busy_genesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1742538864820,
+      "tag": "0008_hesitant_next_avengers",
+      "breakpoints": true
     }
   ]
 }
