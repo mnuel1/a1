@@ -1,17 +1,17 @@
 import { useDropzone } from 'react-dropzone';
 import { readExcelFile } from '../utils/excelReader';
 import toast from 'react-hot-toast';
-// import { uploadManifest } from '../api/manifest';
 
-export const useDropzoneExcel = (onSuccess) => {
+import { uploadManifest } from '../api/manifest';
+
+export const useDropzoneExcel = (setLoading, onSuccess) => {
   const onDrop = async (acceptedFiles) => {
     const file = acceptedFiles[0];
 
     if (!file.name.endsWith('.xlsx')) {
-      toast.error('Invalid file format. Please upload an Excel file.');
-      return;
+      throw new Error('Invalid file format. Please upload an Excel file.');      
     }
-
+    setLoading(true)
     try {
       const excelData = await readExcelFile(file);
 
@@ -48,21 +48,20 @@ export const useDropzoneExcel = (onSuccess) => {
           containerNo,
           totalBoxes,
         };
-        console.log(payload);
+        const result = await uploadManifest(payload)
+
+        if (!result.success) {
+          throw new Error("Something went wrong. Please try again.")
+        }
         
-        // const uploaded = await uploadManifest(payload);
-        // if (uploaded) {
-        //   toast.success('Manifest excel uploaded successfully!');
-        //   onSuccess(payload);
-        // } else {
-        //   toast.error('Failed to upload data.');
-        // }
+        toast.success("New manifest file uploaded successfully.")
       } else {
-        toast.error('SHIPMENT NUMBER or CONTAINER NUMBER not found.');
+        throw new Error('Shipiment number or containert number was not found.');
       }
-    } catch (err) {
-      console.error(err);
-      toast.error('Something went wrong. File cannot be read.');
+    } catch (error) {      
+      toast.error(error.message);
+    } finally {
+      setLoading(false)
     }
   };
 

@@ -12,7 +12,7 @@ const columns = [
   'CONTAINER NO.',
   'TRACKING NO.',
   'NAME OF SENDER',
-  'CONTACT NO.',
+  'SENDER CONTACT NO.',
   'AGENT',
   'CONSIGNEE',
   'CONSIGNEE_ADDRESS',

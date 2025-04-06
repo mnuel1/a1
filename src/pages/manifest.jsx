@@ -1,33 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { useDropzoneExcel } from "../hooks/dropzone";
-// import { uploadManifest } from "../api/manifest";
-import toast from "react-hot-toast";
-// import Input2 from "../components/Input2";
-// import Status from "../components/Status";
 import { Search, UploadCloud } from "lucide-react";
 import clsx from "clsx";
 
+import toast from "react-hot-toast";
+import Input from "../ui/input";
+import Status from "../ui/status";
+
+import { useDropzoneExcel } from "../hooks/dropzone";
+import { useLoading } from '../context/useLoading';
+
+
 const Manifest = () => {
   const [manifestData, setManifestData] = useState([]);
-  const [shipmentNo, setShipmentNo] = useState("");
-  const [containerNo, setContainerNo] = useState("");
-  const [totalBoxes, setTotalBoxes] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzoneExcel(
-    (data) => {
-      setManifestData(data.manifestData);
-      setShipmentNo(data.shipmentNo);
-      setContainerNo(data.containerNo);
-      setTotalBoxes(data.totalBoxes);
-    }
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+  const { setLoading } = useLoading()
+  const { getRootProps, getInputProps, isDragActive } = useDropzoneExcel(setLoading);
 
   const handleSearch = (e) => {
 
@@ -40,18 +28,12 @@ const Manifest = () => {
     )
   );
 
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
 
   return (
-    <div class="flex h-full w-full">
-      <div class="relative flex h-full w-full flex-col p-6">
-        <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-2xl font-bold">Manifest</h2>
+    <div className="flex h-full w-full">
+      <div className="relative flex h-full w-full flex-col p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Manifest</h2>
         </div>
         <div className="focus-within:ring-primary mb-4 flex w-full items-center
             space-x-1 rounded-lg border border-gray-300 px-2 py-1 focus-within:ring-2">
@@ -122,30 +104,6 @@ const Manifest = () => {
     //       </tbody>
     //     </table>
     //   </div>
-
-    //   {/* Pagination */}
-    //   {totalPages > 1 && (
-    //     <div className="flex justify-center mt-4 space-x-2">
-    //       <button
-    //         className="border px-3 py-1 rounded-md disabled:opacity-50"
-    //         onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-    //         disabled={currentPage === 1}
-    //       >
-    //         Prev
-    //       </button>
-    //       <span className="font-semibold">
-    //         {currentPage} / {totalPages}
-    //       </span>
-    //       <button
-    //         className="border px-3 py-1 rounded-md disabled:opacity-50"
-    //         onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-    //         disabled={currentPage === totalPages}
-    //       >
-    //         Next
-    //       </button>
-    //     </div>
-    //   )}
-    // </div>
   );
 };
 

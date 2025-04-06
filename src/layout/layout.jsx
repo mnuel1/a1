@@ -22,9 +22,9 @@ export const Layout = () => {
 	text-font-light dark:text-font-dark transition
 	delay-150 font-main flex w-full min-h-screen">
       {loading && <Loading />}
-      <div class="flex px-4 gap-4 w-full">
+      <div className="flex px-4 gap-4 w-full">
         <Sidebar />
-        <div class="min-h-screen bg-white rounded-md w-full">
+        <div className="min-h-screen bg-white rounded-md w-full">
           <Outlet />
         </div>
       </div>

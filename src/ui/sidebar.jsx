@@ -5,9 +5,10 @@ import { useAuth } from '../context/useAuth';
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
-  const location = useLocation(); // Use react-router to get the current path
-  const { user } = useAuth()
-  const role = user?.role
+  const location = useLocation();
+  const { getUser } = useAuth()
+
+  const role = getUser().role;
   
   useEffect(() => {
     setCurrentPath(location.pathname);
@@ -20,7 +21,7 @@ const Sidebar = () => {
   const navLinks = [
     { name: 'Manifest', href: '/a1/manifest', icon: FileSpreadsheet },
     { name: 'Report', href: '/a1/report', icon: LayoutDashboard },
-    ...(role?.toLowerCase() === 'admin' ? [{ name: 'Staffs', href: '/a1/users', icon: UsersRound }] : []),
+    ...(role?.toLowerCase() === 'admin' ? [{ name: 'Staffs', href: '/a1/staffs', icon: UsersRound }] : []),
     { name: 'Profile', href: '/a1/profile', icon: User },
   ];
 

@@ -1,44 +1,42 @@
-import React, { useState } from 'react';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import toast from "react-hot-toast";
 
-import { useNavigate } from 'react-router-dom';
-import { useLoading } from '../context/useLoading';
-import { useAuth } from '../context/useAuth';
+import { useNavigate } from "react-router-dom";
+import { useLoading } from "../context/useLoading";
+import { useAuth } from "../context/useAuth";
 
-import { loginWithCredentials } from '../api/auth';
+import { loginWithCredentials } from "../api/auth";
 
-import LoginInput from '../ui/input';
+import LoginInput from "../ui/input";
 
 const Login = () => {
-  const [loginID, setLoginID] = useState('');
-  const [password, setPassword] = useState('');
-  const { setLoading } = useLoading()
-	const { login } = useAuth()
-	const navigate = useNavigate()
+  const [loginID, setLoginID] = useState("");
+  const [password, setPassword] = useState("");
+  const { setLoading } = useLoading();
+  const { login } = useAuth();
+  const navigate = useNavigate();
   const onSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     if (!loginID || !password) {
-      toast.error('Please provide both login ID and password.');
+      toast.error("Please provide both login ID and password.");
       setLoading(false);
       return;
     }
 
     try {
- 
       const user = await loginWithCredentials(login, loginID, password);
 
       if (user) {
-        toast.success('Login Success!');
-        console.log('Logged in successfully:', user);
-				navigate("/a1/manifest")
+        toast.success("Login Success!");
+        console.log("Logged in successfully:", user);
+        navigate("/a1/manifest");
       }
     } catch (error) {
       toast.error(`Login failed: ${error.message}`);
     } finally {
       setLoading(false);
-
     }
   };
 
@@ -80,7 +78,7 @@ const Login = () => {
             <button
               type="submit"
               className="cursor-pointer w-full bg-primary text-white py-2 rounded-md hover:bg-primary-hover transition"
-            //   disabled={loading}
+              //   disabled={loading}
             >
               Login
             </button>

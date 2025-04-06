@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import Calendar from '@event-calendar/core';
 import DayGrid from '@event-calendar/day-grid';
-import '../../node_modules/event-calendar/core/index.css';
-import '../../node_modules/event-calendar/day-grid/index.css';
+import "@event-calendar/core/index.css";
+
 
 const ScheduleCalendar = () => {
   const calendarRef = useRef(null);

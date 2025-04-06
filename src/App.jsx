@@ -6,6 +6,8 @@ import { Layout, AuthLayout } from './layout/layout'
 import Login from "./pages/login";
 import Manifest from "./pages/manifest";
 import Report from "./pages/report";
+import Staffs from "./pages/users";
+import Account from "./pages/account"
 import NotFound from "./pages/notfound";
 
 function AppRouter() {
@@ -22,8 +24,8 @@ function AppRouter() {
           <Route index element={<Navigate to="manifest" replace />} />
           <Route path="manifest" element={<Manifest />} />
           <Route path="report" element={<Report />} />
-          {/* <Route path="/users" element={<Users />} />
-          <Route path="/account" element={<Account />} /> */}
+          <Route path="staffs" element={<Staffs />} />
+          <Route path="profile" element={<Account />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -41,16 +43,13 @@ function App () {
         containerClassName=""
         containerStyle={{}}
         toastOptions={{
-          // Define default options
           className: '',
           duration: 5000,
           removeDelay: 1000,
           style: {
             background: '#363636',
             color: '#fff',
-          },
-
-          // Default options for specific types
+          },          
           success: {
             duration: 3000,
             iconTheme: {
