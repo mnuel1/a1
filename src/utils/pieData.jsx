@@ -1,26 +1,71 @@
 export default [
     {
-        group: '2V2N 9KYPM version 1',
-        value: 20000
+      group: 'National Capital Region (NCR)',
+      value: 50000
     },
     {
-        group: 'L22I P66EP L22I P66EP L22I P66EP',
-        value: 65000
+      group: 'Cordillera Administrative Region (CAR)',
+      value: 30000
     },
     {
-        group: 'JQAI 2M4L1',
-        value: 75000
+      group: 'Ilocos Region (Region I)',
+      value: 42000
     },
     {
-        group: 'J9DZ F37AP',
-        value: 1200
+      group: 'Cagayan Valley (Region II)',
+      value: 28000
     },
     {
-        group: 'YEL48 Q6XK YEL48',
-        value: 10000
+      group: 'Central Luzon (Region III)',
+      value: 60000
     },
     {
-        group: 'Misc',
-        value: 25000
+      group: 'CALABARZON (Region IV-A)',
+      value: 75000
+    },
+    {
+      group: 'MIMAROPA (Region IV-B)',
+      value: 22000
+    },
+    {
+      group: 'Bicol Region (Region V)',
+      value: 33000
+    },
+    {
+      group: 'Western Visayas (Region VI)',
+      value: 41000
+    },
+    {
+      group: 'Central Visayas (Region VII)',
+      value: 47000
+    },
+    {
+      group: 'Eastern Visayas (Region VIII)',
+      value: 29000
+    },
+    {
+      group: 'Zamboanga Peninsula (Region IX)',
+      value: 26000
+    },
+    {
+      group: 'Northern Mindanao (Region X)',
+      value: 37000
+    },
+    {
+      group: 'Davao Region (Region XI)',
+      value: 55000
+    },
+    {
+      group: 'SOCCSKSARGEN (Region XII)',
+      value: 34000
+    },
+    {
+      group: 'Caraga (Region XIII)',
+      value: 31000
+    },
+    {
+      group: 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)',
+      value: 18000
     }
-]
+  ];
+  

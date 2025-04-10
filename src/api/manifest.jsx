@@ -1,8 +1,13 @@
-import { supabase } from '../supabaseClient';
+import { supabase } from "../supabaseClient";
 
 export const uploadManifest = async (manifestData) => {
   try {
-    const { shipmentNo, containerNo, totalBoxes, manifestData: rows } = manifestData;
+    const {
+      shipmentNo,
+      containerNo,
+      totalBoxes,
+      manifestData: rows,
+    } = manifestData;
 
     if (!Array.isArray(rows) || rows.length === 0) {
       throw new Error("No valid data provided.");
@@ -57,5 +62,54 @@ export const uploadManifest = async (manifestData) => {
     return { success: true };
   } catch (error) {
     throw new Error(error.message);
+  }
+};
+
+export const getRecentManifest = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("shipments")
+      .select("shipment_number")
+      .order("shipment_number", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error("Error fetching shipment:", error);
+      return null;
+    }
+    
+    return data.shipment_number || null;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5) => {
+  try {
+    let query = supabase
+      .from("deliveries")
+      .select("*, shipments!inner(*)", { count: "exact" })
+      .range((page - 1) * rowLimit, page * rowLimit - 1);
+    
+    if (filters.shipment_number) {
+      query = query.eq("shipments.shipment_number", filters.shipment_number);
+    }
+
+    if (filters.status && filters.status !== "ALL") {
+      query = query.eq("status", filters.status);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Error fetching deliveries:", error);
+      return { data: [], totalCount: 0 };
+    }
+
+    return { data, totalCount: count || 0 };
+  } catch (error) {
+    console.error("Unexpected error:", error.message);
+    return { data: [], totalCount: 0 };
   }
 };

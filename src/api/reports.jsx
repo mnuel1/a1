@@ -1,6 +1,6 @@
 import { supabase } from "../supabaseClient";
 
-export const getTotalBoxes = async (shipmentNo) => {
+export const getTotalBoxes = async (shipmentNumber) => {
   try {
     const { data, error } = await supabase
       .from("deliveries")
@@ -8,8 +8,7 @@ export const getTotalBoxes = async (shipmentNo) => {
       // .eq("shipment_id", "8");
 
     if (error) throw error;
-
-    // Group and sum qty by destination
+    
     const grouped = data.reduce((acc, curr) => {
       const dest = curr.destination;
       const qty = parseInt(curr.qty) || 0;
@@ -28,3 +27,20 @@ export const getTotalBoxes = async (shipmentNo) => {
     throw new Error(error.message);
   }
 };
+
+export const dissectByCity = async (shipmentNumber) => {
+
+  try {
+    const { data, error } = await supabase
+      .from("deliveries")
+      .select("*, shipments!inner(*)", { count: "exact" })
+      .eq("shipments.shipment_number", shipmentNumber)      
+
+    if (error) throw error;
+    
+    
+  } catch (error) {
+    throw new Error(error.message);
+  }
+
+}

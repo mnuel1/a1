@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 
-const Status = ({ label = "", value = "", options = [], onChange }) => {
+const Status = ({ 
+  label = "", 
+  value = "", 
+  options = [], 
+  onChange }) => {
   const defaultOptions = [
     "OUT FOR DELIVERY",
     "DELIVERED",
@@ -10,13 +14,14 @@ const Status = ({ label = "", value = "", options = [], onChange }) => {
     "HOLD",
     "DISPATCH-PROVINCE",
     "N/A",
+    "ALL"
   ];
 
   const finalOptions = options.length ? options : defaultOptions;
-  const [selectedValue, setSelectedValue] = useState(value || "N/A");
+  const [selectedValue, setSelectedValue] = useState(value || "ALL");
 
   useEffect(() => {
-    setSelectedValue(value || "N/A");
+    setSelectedValue(value || "ALL");
   }, [value]);
 
   const handleChange = (e) => {
