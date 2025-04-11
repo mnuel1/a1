@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-import { getDeliveries } from "../api/manifest";
+import {
+  getDeliveries,
+  getRecentManifest,
+  exportToExcel,
+} from "../api/manifest";
 import Status from "./status";
 import Shipments from "./shipments";
+import { useLoading } from "../context/useLoading";
 
 const rowLimit = 5;
 
@@ -41,18 +46,24 @@ const mapToColumns = (row) => ({
   STATUS: row.status || "N/A",
 });
 
-const ManifestTable = ({ shipmentNumber, setShipmentNumber, isFull }) => {
+const ManifestTable = ({ isFull }) => {
   const navigate = useNavigate();
+  const [shipmentNumber, setShipmentNumber] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [deliveries, setDeliveries] = useState([]);
+  const { setLoading } = useLoading();
 
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     }
   };
+
+  useEffect(() => {
+    getRecentManifest().then(setShipmentNumber);
+  }, []);
 
   useEffect(() => {
     getDeliveries(
@@ -64,21 +75,48 @@ const ManifestTable = ({ shipmentNumber, setShipmentNumber, isFull }) => {
       rowLimit
     ).then(({ data, totalCount }) => {
       setDeliveries(data);
+      console.log(data);
+
       setTotalPages(Math.ceil(totalCount / rowLimit));
     });
   }, [selectedStatus, shipmentNumber, currentPage]);
 
+  const handleExport = async () => {
+    if (!shipmentNumber) {
+      toast.error("Please select a shipment number first.");
+      return;
+    }
+    setLoading(true);
+    exportToExcel(shipmentNumber)
+      .then(() => {
+        toast.success(`${shipmentNumber} manifest exported to excel.`)
+      })
+      .catch((error) => {
+        toast.error(error.message || "Export failed");
+      })
+      .finally(() => setLoading(false));
+  };
+
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="my-2 flex items-center w-full gap-2">
-        <Status label="Status" onChange={setSelectedStatus} />
-        <Shipments
-          value={shipmentNumber}
-          label="Shipment No."
-          onChange={setShipmentNumber}
-        />
+      <div className="flex justify-between w-full">
+        <div className="my-2 flex items-center w-full gap-2">
+          <Status label="Status" onChange={setSelectedStatus} />
+          <Shipments
+            value={shipmentNumber}
+            label="Shipment No."
+            onChange={setShipmentNumber}
+          />
+        </div>
+        <div className="flex items-center">
+          <button
+            className="flex gap-2 w-full bg-primary px-3 py-2 text-white rounded-lg whitespace-nowrap cursor-pointer hover:bg-primary-60"
+            onClick={handleExport}
+          >
+            <FileSpreadsheet /> Export to Excel
+          </button>
+        </div>
       </div>
-
       <div className="relative h-full overflow-x-auto">
         <table className="mt-2 w-full table-auto border-collapse rounded-lg border border-gray-100">
           <thead className="bg-gray-100/50">
@@ -117,7 +155,10 @@ const ManifestTable = ({ shipmentNumber, setShipmentNumber, isFull }) => {
               })
             ) : (
               <tr>
-                <td colSpan={columns.length} className="p-6 text-center text-gray-500">
+                <td
+                  colSpan={columns.length}
+                  className="p-6 text-center text-gray-500"
+                >
                   There's no data yet.
                 </td>
               </tr>
@@ -130,14 +171,14 @@ const ManifestTable = ({ shipmentNumber, setShipmentNumber, isFull }) => {
             <div className="mt-4 flex items-center justify-center space-x-2">
               <button
                 onClick={() => goToPage(currentPage - 1)}
-                className={`rounded-md border border-gray-300 px-3 py-2 text-xs ${
+                className={`rounded-md border border-gray-300 px-3 py-2 cursor-pointer text-xs shadow-lg ${
                   currentPage === 1
                     ? "cursor-not-allowed opacity-50"
                     : "hover:bg-primary"
                 }`}
                 disabled={currentPage === 1}
               >
-                <ChevronLeft size={10} />
+                <ChevronLeft size={15} />
               </button>
 
               <input
@@ -146,27 +187,27 @@ const ManifestTable = ({ shipmentNumber, setShipmentNumber, isFull }) => {
                 onChange={(e) => goToPage(Number(e.target.value))}
                 min="1"
                 max={totalPages}
-                className="w-10 rounded-md border border-gray-300 px-2 py-1 text-center focus:outline-none"
+                className="w-fit rounded-md border border-gray-300 px-2 py-1 text-center focus:outline-none"
               />
               <span className="text-sm text-gray-600">/ {totalPages}</span>
 
               <button
                 onClick={() => goToPage(currentPage + 1)}
-                className={`rounded-md border border-gray-300 px-3 py-2 text-xs ${
+                className={`rounded-md border border-gray-300 px-3 py-2 cursor-pointer text-xs shadow-lg ${
                   currentPage === totalPages
                     ? "cursor-not-allowed opacity-50"
                     : "hover:bg-primary"
                 }`}
                 disabled={currentPage === totalPages}
               >
-                <ChevronRight size={10} />
+                <ChevronRight size={15} />
               </button>
             </div>
           )
         ) : (
           <div className="mt-4 text-center">
             <button
-              onClick={() => navigate("/full-manifest")}
+              onClick={() => navigate("/a1/database")}
               className="text-sm text-blue-500 hover:underline"
             >
               Show More

@@ -1,46 +1,48 @@
 import { supabase } from "../supabaseClient";
 
-export const getTotalBoxes = async (shipmentNumber) => {
+export const getAnalytics = async (shipmentNumber) => {
   try {
     const { data, error } = await supabase
       .from("deliveries")
-      .select("destination, qty")
-      // .eq("shipment_id", "8");
+      .select("region, destination, qty")
+      // .eq("shipment_id", shipmentNumber);
 
     if (error) throw error;
-    
-    const grouped = data.reduce((acc, curr) => {
+
+    const groupedDestinations = data.reduce((acc, curr) => {
       const dest = curr.destination;
       const qty = parseInt(curr.qty) || 0;
-
       acc[dest] = (acc[dest] || 0) + qty;
       return acc;
     }, {});
 
-    const result = Object.entries(grouped).map(([destination, totalQty]) => ({
-      destination,
-      totalQty,
-    }));
+    const destinations = Object.entries(groupedDestinations).map(
+      ([destination, totalQty]) => ({
+        destination,
+        totalQty,
+      })
+    );
+    
+    const groupedRegions = data.reduce((acc, curr) => {
+      const region = curr.region;
+      const qty = parseInt(curr.qty) || 0;
+      if (!region) return acc;
+      acc[region] = (acc[region] || 0) + qty;
+      return acc;
+    }, {});
 
-    return result;
+    const regions = Object.entries(groupedRegions).map(
+      ([region, value]) => ({
+        group: region,
+        value,
+      })
+    );
+    
+    return {
+      destinations,
+      regions,
+    };
   } catch (error) {
     throw new Error(error.message);
   }
 };
-
-export const dissectByCity = async (shipmentNumber) => {
-
-  try {
-    const { data, error } = await supabase
-      .from("deliveries")
-      .select("*, shipments!inner(*)", { count: "exact" })
-      .eq("shipments.shipment_number", shipmentNumber)      
-
-    if (error) throw error;
-    
-    
-  } catch (error) {
-    throw new Error(error.message);
-  }
-
-}

@@ -5,6 +5,7 @@ import { Layout, AuthLayout } from './layout/layout'
 
 import Login from "./pages/login";
 import Manifest from "./pages/manifest";
+import Database from "./pages/database";
 import Report from "./pages/report";
 import Staffs from "./pages/users";
 import Account from "./pages/account"
@@ -23,6 +24,7 @@ function AppRouter() {
         <Route path="/a1" element={<Layout />} >
           <Route index element={<Navigate to="manifest" replace />} />
           <Route path="manifest" element={<Manifest />} />
+          <Route path="database" element={<Database />} />
           <Route path="report" element={<Report />} />
           <Route path="staffs" element={<Staffs />} />
           <Route path="profile" element={<Account />} />

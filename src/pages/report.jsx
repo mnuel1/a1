@@ -6,16 +6,16 @@ import ManifestTable from "../ui/table";
 // import Map from "../ui/map";
 import ScheduleCalendar from "../ui/calendar";
 
-import pieData from "../utils/pieData";
+import data from "../utils/pieData";
 import pieOption from "../utils/pieOption";
 
-import { getTotalBoxes } from "../api/reports";
-import { getRecentManifest } from "../api/manifest";
+import { getAnalytics } from "../api/reports";
 import { useLoading } from "../context/useLoading";
 
 const Report = () => {
   const { setLoading } = useLoading();
-  const [shipmentNumber, setShipmentNumber] = useState(null);
+  
+  const [pieData, setPieData] = useState(data)
   const [totalBoxes, setTotalBoxes] = useState([
     {
       destination: "LUZ",
@@ -37,11 +37,11 @@ const Report = () => {
 
   useEffect(() => {
     setLoading(true);
-    getRecentManifest().then(setShipmentNumber);
 
-    getTotalBoxes()
-      .then((res) => {
-        setTotalBoxes(res);
+    getAnalytics()
+      .then((res) => {        
+        setPieData(res.regions)
+        setTotalBoxes(res.destinations);
       })
       .catch((error) => {
         toast.error(`${error.message}`);
@@ -81,10 +81,7 @@ const Report = () => {
           </div>
           <div className="col-span-2  rounded-lg border border-gray-200 bg-white p-6 shadow-lg">
             <h3 className="mb-4 font-semibold text-lg">Generate Reports</h3>
-            <ManifestTable
-              shipmentNumber={shipmentNumber}
-              setShipmentNumber={setShipmentNumber}
-            />
+            <ManifestTable/>
           </div>
           {/* 
           <div className="grow rounded-lg bg-white p-6 shadow-md">

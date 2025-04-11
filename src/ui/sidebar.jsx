@@ -6,6 +6,7 @@ import {
   LogOut,
   FileSpreadsheet,
   UsersRound,
+  Table
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
@@ -27,6 +28,7 @@ const Sidebar = () => {
 
   const navLinks = [
     { name: "Manifest", href: "/a1/manifest", icon: FileSpreadsheet },
+    { name: "Database", href: "/a1/database", icon: Table },
     { name: "Report", href: "/a1/report", icon: LayoutDashboard },
     ...(role?.toLowerCase() === "admin"
       ? [{ name: "Staffs", href: "/a1/staffs", icon: UsersRound }]
