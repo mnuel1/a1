@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }) => {
     setSession(null);
     localStorage.removeItem("user"); 
     auth.deleteSessionTokenCookie();
+    
   };
 
   return (

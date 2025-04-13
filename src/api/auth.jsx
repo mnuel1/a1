@@ -8,14 +8,14 @@ export const loginWithCredentials = async (login, loginID, password) => {
     
     const { data, error } = await supabase
       .from('user')
-      .select('id, name, role, access, status, login_id')
+      .select('id, name, password, role, access, status, login_id')
       .eq('login_id', loginID)
       .single();
     
     if (error || !data) {
       throw new Error('Account doesn\'t exist');
     }
-        
+
     const isPasswordValid = await bcrypt.compare(password, data.password);
     
     if (!isPasswordValid) {

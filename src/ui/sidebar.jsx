@@ -8,16 +8,27 @@ import {
   UsersRound,
   Table
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentPath, setCurrentPath] = useState("");
+  const [role, setRole] = useState(null)
+  const { getUser, logout } = useAuth();  
   const location = useLocation();
-  const { getUser, logout } = useAuth();
-
-  const role = getUser().role;
-
+  const navigate = useNavigate();
+    
+  useEffect(() => {
+    const user = getUser?.();
+    
+    if (!user || !user.role) {      
+      setRole(null);
+    } else {      
+      setRole(user.role);
+    }
+  }, [getUser]);
+  
   useEffect(() => {
     setCurrentPath(location.pathname);
   }, [location]);
@@ -36,7 +47,14 @@ const Sidebar = () => {
     { name: "Profile", href: "/a1/profile", icon: User },
   ];
 
+  const handleLogout = () => {
+
+    logout()
+    navigate("/")
+  }
+
   return (
+
     <div className="flex h-screen">
       <aside
         className={`fixed top-0 left-0 h-full z-20 rounded-lg border 
@@ -86,7 +104,7 @@ const Sidebar = () => {
             <hr className="border-gray-500 border"/>
             <button
               type="button"
-              onClick={logout}
+              onClick={handleLogout}
               className={`hover:bg-primary hover:text-font-dark flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 transition-all duration-300 ${
                 !isExpanded ? "justify-center" : ""
               }`}

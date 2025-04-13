@@ -43,7 +43,7 @@ const ScheduleCalendar = () => {
       setModalOpen(false);
       setFormData({ date: "", title: "", time: "" });
     } catch (error) {
-      toast.error(`Login failed: ${error.message}`);
+      toast.error(`${error.message}`);
     } finally {
       setLoading(false);
     }
