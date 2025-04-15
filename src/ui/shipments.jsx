@@ -8,6 +8,8 @@ const Shipments = ({
     
   const defaultOptions = [
     "2501",
+    "2504",
+    "2505",
     "2434",
     "2435",
     "2437",
