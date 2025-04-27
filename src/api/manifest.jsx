@@ -132,20 +132,19 @@ export const getRecentManifest = async () => {
     const { data, error } = await supabase
       .from("shipments")
       .select("shipment_number")
-      .order("shipment_number", { ascending: false })
-      .limit(1)
-      .single();
+      .order("shipment_number", { ascending: false });
 
     if (error) {
-      console.error("Error fetching shipment:", error);
-      return null;
+      console.error("Error fetching shipments:", error);
+      return [];
     }
-
-    return data.shipment_number || null;
+    
+    return data.map(item => item.shipment_number);
   } catch (error) {
     throw new Error(error.message);
   }
 };
+
 
 export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5) => {
   try {

@@ -85,9 +85,9 @@ const Manifest = () => {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={clsx(
-                    "px-4 py-2 rounded-lg text-sm font-semibold border transition duration-300",
+                    "px-4 py-2 rounded-lg text-sm font-semibold border transition duration-300 cursor-pointer",
                     activeTab === tab
-                      ? "bg-blue-500 text-white"
+                      ? "bg-red-800 text-white"
                       : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
                   )}
                 >
@@ -103,29 +103,43 @@ const Manifest = () => {
                   key={item.delivery_id}
                   className="border rounded-lg p-6 shadow-sm bg-white"
                 >
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                    Delivery #{item.delivery_id}
-                  </h3>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {/* Basic Info: Tracking, Barcode */}
-                    <div className="space-y-2">
-                      <p>
-                        <strong className="text-gray-700">
-                          Tracking Number:
-                        </strong>{" "}
-                        {item.tracking_number}
-                      </p>
-                      <p>
-                        <strong className="text-gray-700">Barcode:</strong>{" "}
-                        {item.barcode_no}
-                      </p>
-                      <p>
-                        <strong className="text-gray-700">Quantity:</strong>{" "}
-                        {item.qty}
-                      </p>
-                    </div>
+                    <div className="space-y-2 ">
+                      <div className="flex gap-4">
+                        <p>
+                          <strong className="text-gray-700">
+                            Shipment Number:
+                          </strong>{" "}
+                          {item.shipments.shipment_number}
+                        </p>
+                        <p>
+                          <strong className="text-gray-700">
+                            Container Number:
+                          </strong>{" "}
+                          {item.shipments.container_number}
+                        </p>
 
+                      </div>
+                      <div className="flex gap-2">
+
+           
+                        <p>
+                          <strong className="text-gray-700">
+                            Tracking Number:
+                          </strong>{" "}
+                          {item.tracking_number}
+                        </p>
+                        <p>
+                          <strong className="text-gray-700">Barcode:</strong>{" "}
+                          {item.barcode_no}
+                        </p>
+                        <p>
+                          <strong className="text-gray-700">Quantity:</strong>{" "}
+                          {item.qty}
+                        </p>
+                      </div>
+                    </div>
+        
                     {/* Shipper & Consignee */}
                     <div className="space-y-2">
                       <p>
@@ -199,30 +213,6 @@ const Manifest = () => {
                           Date Received:
                         </strong>{" "}
                         {item.date_received || "Not Set"}
-                      </p>
-                    </div>
-
-                    {/* Shipment Info */}
-                    <div className="space-y-2">
-                      <p>
-                        <strong className="text-gray-700">
-                          Shipment Number:
-                        </strong>{" "}
-                        {item.shipments.shipment_number}
-                      </p>
-                      <p>
-                        <strong className="text-gray-700">
-                          Container Number:
-                        </strong>{" "}
-                        {item.shipments.container_number}
-                      </p>
-                    </div>
-
-                    {/* Created At */}
-                    <div className="space-y-2">
-                      <p>
-                        <strong className="text-gray-700">Created At:</strong>{" "}
-                        {new Date(item.created_at).toLocaleString()}
                       </p>
                     </div>
                   </div>
