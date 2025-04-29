@@ -12,8 +12,6 @@ import Status from "./status";
 import Shipments from "./shipments";
 import { useLoading } from "../context/useLoading";
 
-const rowLimit = 5;
-
 const columns = [
   "SHIPMENT NO.",
   "CONTAINER NO.",
@@ -53,6 +51,7 @@ const ManifestTable = ({ isFull }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [deliveries, setDeliveries] = useState([]);
+  const [rowLimit, setRowLimit] = useState(5);
   const { setLoading } = useLoading();
 
   const goToPage = (page) => {
@@ -79,7 +78,7 @@ const ManifestTable = ({ isFull }) => {
 
       setTotalPages(Math.ceil(totalCount / rowLimit));
     });
-  }, [selectedStatus, shipmentNumber, currentPage]);
+  }, [selectedStatus, shipmentNumber, currentPage, rowLimit]);
 
   const handleExport = async () => {
     if (!shipmentNumber) {
@@ -89,7 +88,7 @@ const ManifestTable = ({ isFull }) => {
     setLoading(true);
     exportToExcel(shipmentNumber)
       .then(() => {
-        toast.success(`${shipmentNumber} manifest exported to excel.`)
+        toast.success(`${shipmentNumber} manifest exported to excel.`);
       })
       .catch((error) => {
         toast.error(error.message || "Export failed");
@@ -97,10 +96,14 @@ const ManifestTable = ({ isFull }) => {
       .finally(() => setLoading(false));
   };
 
+  const handleShowAll = () => {
+    setRowLimit(10000);
+  };
+
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="flex justify-between w-full">
-        <div className="my-2 flex items-center w-full gap-2">
+      <div className="flex flex-col lg:flex-row justify-between w-full gap-2">
+        <div className="flex items-center w-full gap-2">
           <Status label="Status" onChange={setSelectedStatus} />
           <Shipments
             value={shipmentNumber}
@@ -168,40 +171,51 @@ const ManifestTable = ({ isFull }) => {
 
         {isFull ? (
           totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-center space-x-2">
+            <div className="flex justify-between items-center">
               <button
-                onClick={() => goToPage(currentPage - 1)}
-                className={`rounded-md border border-gray-300 px-3 py-2 cursor-pointer text-xs shadow-lg ${
-                  currentPage === 1
-                    ? "cursor-not-allowed opacity-50"
-                    : "hover:bg-primary"
-                }`}
-                disabled={currentPage === 1}
+                onClick={handleShowAll}
+                className="border-primary border px-2 py-1 
+                text-black/90 hover:text-black hover:border-primary-60 rounded-lg cursor-pointer"
               >
-                <ChevronLeft size={15} />
+                Show All
               </button>
+              {rowLimit !== 10000 && (
+                <div className="mt-4 flex items-center justify-center space-x-2">
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    className={`rounded-md border border-gray-300 px-3 py-2 cursor-pointer text-xs shadow-lg ${
+                      currentPage === 1
+                        ? "cursor-not-allowed opacity-50"
+                        : "hover:bg-primary"
+                    }`}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
 
-              <input
-                type="number"
-                value={currentPage}
-                onChange={(e) => goToPage(Number(e.target.value))}
-                min="1"
-                max={totalPages}
-                className="w-fit rounded-md border border-gray-300 px-2 py-1 text-center focus:outline-none"
-              />
-              <span className="text-sm text-gray-600">/ {totalPages}</span>
+                  <input
+                    type="number"
+                    value={currentPage}
+                    onChange={(e) => goToPage(Number(e.target.value))}
+                    min="1"
+                    max={totalPages}
+                    className="w-fit rounded-md border border-gray-300 px-2 py-1 text-center focus:outline-none"
+                  />
+                  <span className="text-sm text-gray-600">/ {totalPages}</span>
 
-              <button
-                onClick={() => goToPage(currentPage + 1)}
-                className={`rounded-md border border-gray-300 px-3 py-2 cursor-pointer text-xs shadow-lg ${
-                  currentPage === totalPages
-                    ? "cursor-not-allowed opacity-50"
-                    : "hover:bg-primary"
-                }`}
-                disabled={currentPage === totalPages}
-              >
-                <ChevronRight size={15} />
-              </button>
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    className={`rounded-md border border-gray-300 px-3 py-2 cursor-pointer text-xs shadow-lg ${
+                      currentPage === totalPages
+                        ? "cursor-not-allowed opacity-50"
+                        : "hover:bg-primary"
+                    }`}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+              )}
             </div>
           )
         ) : (

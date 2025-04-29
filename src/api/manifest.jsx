@@ -123,7 +123,7 @@ export const uploadManifest = async (manifestData) => {
 
     return { success: true };
   } catch (error) {
-    throw new Error(error.message);
+    throw new Error(error.message);``
   }
 };
 
