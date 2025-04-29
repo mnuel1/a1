@@ -298,39 +298,20 @@ export const createDelivery = async (formData) => {
   }
 };
 
-export const updateDelivery = async (formData) => {
+export const updateDelivery = async (deliveryId, updatedFields) => {
   try {
-    const deliveryId = parseInt(formData.deliveryId);
-
-    const updatedData = {
-      tracking_number: formData.trackingNumber,
-      qty: parseInt(formData.qty),
-      barcode_no: formData.barcode,
-      agent: formData.agent,
-      agent2: formData.agent2,
-      shipper_name: `${formData.shipperFirstName} ${formData.shipperLastName}`,
-      shipper_ctc: formData.shipperCtc,
-      consignee: `${formData.consigneeFirstName} ${formData.consigneeLastName}`,
-      consignee_address: formData.consigneeAddress,
-      consignee_ctc: formData.consigneeCtc,
-      destination: formData.destination,
-      status: formData.status,
-      date_out_for_delivery: formData.dateOutForDelivery || null,
-      date_received: formData.dateReceived || null,
-      received_by: formData.receivedBy || null,
-    };
-
     const { data, error } = await supabase
       .from("deliveries")
-      .update(updatedData)
-      .eq("delivery_id", deliveryId);
+      .update(updatedFields)
+      .eq("delivery_id", parseInt(deliveryId));
 
     if (error) throw error;
+
     if (!data || data.length === 0) {
-      return { error: true, message: "Delivery not found" };
+      return { error: true, message: `${deliveryId} not found` };
     }
 
-    return { success: true, message: "Delivery updated successfully" };
+    return { success: true, message: `${deliveryId} updated successfully` };
   } catch (error) {
     console.error(error);
     return { error: error.message };

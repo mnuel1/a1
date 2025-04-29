@@ -14,7 +14,7 @@ export const readExcelFile = (file) => {
         );
 
         if (!sheetName) {
-          toast.error('PINOY CARGO sheet cannot be found');
+          toast.error('PINOY CARGO sheet cannot be found.');
           return;
         }
 

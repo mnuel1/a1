@@ -16,13 +16,13 @@ const columns = [
   "SHIPMENT NO.",
   "CONTAINER NO.",
   "TRACKING NO.",
+  "BARCODE",
   "NAME OF SENDER",
   "SENDER CONTACT NO.",
   "AGENT",
   "CONSIGNEE",
   "CONSIGNEE_ADDRESS",
   "CONTACT NO.",
-  "BARCODE",
   "DESTINATION",
   "# OF BOXES",
   "STATUS",
@@ -46,8 +46,10 @@ const mapToColumns = (row) => ({
 
 const ManifestTable = ({ isFull }) => {
   const navigate = useNavigate();
+  const [selectedAll, setSelectedAll] = useState(false);
+  const [selectedRows, setSelectedRows] = useState([]);
   const [shipmentNumber, setShipmentNumber] = useState(null);
-  const [shipmentNumbers, setShipmentNumbers] = useState([])
+  const [shipmentNumbers, setShipmentNumbers] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -66,13 +68,12 @@ const ManifestTable = ({ isFull }) => {
       const numbers = await getRecentManifest();
       if (numbers.length > 0) {
         setShipmentNumber(numbers[0]);
-        setShipmentNumbers(numbers);  
+        setShipmentNumbers(numbers);
       }
     };
-  
+
     fetchManifests();
   }, []);
-  
 
   useEffect(() => {
     getDeliveries(
@@ -110,6 +111,22 @@ const ManifestTable = ({ isFull }) => {
     setRowLimit(10000);
   };
 
+  const handleSelectAll = () => {
+    if (selectedAll) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(deliveries.map((item) => item.delivery_id));
+    }
+    setSelectedAll(!selectedAll);
+  };
+  const handleSelectRow = (id) => {
+    if (selectedRows.includes(id)) {
+      setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
+    } else {
+      setSelectedRows([...selectedRows, id]);
+    }
+  };
+
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex flex-col lg:flex-row justify-between w-full gap-2">
@@ -135,14 +152,32 @@ const ManifestTable = ({ isFull }) => {
         <table className="mt-2 w-full table-auto border-collapse rounded-lg border border-gray-100">
           <thead className="bg-gray-100/50">
             <tr>
-              {columns.map((col) => (
-                <th
-                  key={col}
-                  className="p-3 text-center text-xs font-normal text-black"
-                >
-                  {col}
-                </th>
-              ))}
+              <th className="p-3 text-center text-xs font-normal text-black">
+                <input
+                  type="checkbox"
+                  className="custom-checkbox"
+                  checked={selectedAll}
+                  onChange={handleSelectAll}
+                />
+              </th>
+
+              {columns.map((col) =>
+                col === "STATUS" ? (
+                  <th
+                    key={col}
+                    className="p-3 text-center text-xs font-normal text-black sticky right-0 bg-gray-100 z-10"
+                  >
+                    {col}
+                  </th>
+                ) : (
+                  <th
+                    key={col}
+                    className="p-3 text-center text-xs font-normal text-black"
+                  >
+                    {col}
+                  </th>
+                )
+              )}
             </tr>
           </thead>
           <tbody>
@@ -156,14 +191,32 @@ const ManifestTable = ({ isFull }) => {
                       i % 2 !== 0 ? "bg-gray-100/50" : "bg-white"
                     } hover:bg-primary/10 cursor-pointer transition`}
                   >
-                    {columns.map((col, j) => (
-                      <td
-                        key={j}
-                        className="p-3 text-center text-xs font-normal text-black"
-                      >
-                        {mappedRow[col]}
-                      </td>
-                    ))}
+                    <td className="py-3 px-4 text-center">
+                      <input
+                        type="checkbox"
+                        className="custom-checkbox"
+                        checked={selectedRows.includes(row.delivery_id)}
+                        onChange={() => handleSelectRow(row.delivery_id)}
+                      />
+                    </td>
+
+                    {columns.map((col, j) =>
+                      col === "STATUS" ? (
+                        <td
+                          key={j}
+                          className="p-3 text-center text-xs font-normal text-black sticky right-0 bg-white"
+                        >
+                          {mappedRow[col]}
+                        </td>
+                      ) : (
+                        <td
+                          key={j}
+                          className="p-3 text-center text-xs font-normal text-black"
+                        >
+                          {mappedRow[col]}
+                        </td>
+                      )
+                    )}
                   </tr>
                 );
               })
