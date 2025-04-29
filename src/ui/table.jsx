@@ -47,6 +47,7 @@ const mapToColumns = (row) => ({
 const ManifestTable = ({ isFull }) => {
   const navigate = useNavigate();
   const [shipmentNumber, setShipmentNumber] = useState(null);
+  const [shipmentNumbers, setShipmentNumbers] = useState([])
   const [selectedStatus, setSelectedStatus] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -61,8 +62,17 @@ const ManifestTable = ({ isFull }) => {
   };
 
   useEffect(() => {
-    getRecentManifest().then(setShipmentNumber);
+    const fetchManifests = async () => {
+      const numbers = await getRecentManifest();
+      if (numbers.length > 0) {
+        setShipmentNumber(numbers[0]);
+        setShipmentNumbers(numbers);  
+      }
+    };
+  
+    fetchManifests();
   }, []);
+  
 
   useEffect(() => {
     getDeliveries(
@@ -107,6 +117,7 @@ const ManifestTable = ({ isFull }) => {
           <Status label="Status" onChange={setSelectedStatus} />
           <Shipments
             value={shipmentNumber}
+            options={shipmentNumbers}
             label="Shipment No."
             onChange={setShipmentNumber}
           />

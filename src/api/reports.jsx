@@ -5,7 +5,7 @@ export const getAnalytics = async (shipmentNumber) => {
     const { data, error } = await supabase
       .from("deliveries")
       .select("region, destination, qty")
-      // .eq("shipment_id", shipmentNumber);
+      .eq("shipment_id", 22);
 
     if (error) throw error;
 
