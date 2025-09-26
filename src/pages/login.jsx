@@ -12,9 +12,10 @@ import LoginInput from "../ui/input";
 const Login = () => {
   const [loginID, setLoginID] = useState("");
   const [password, setPassword] = useState("");
-  const { setLoading } = useLoading();
+  const { loading, setLoading } = useLoading();
   const { login } = useAuth();
   const navigate = useNavigate();
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -30,8 +31,6 @@ const Login = () => {
 
       if (user) {
         toast.success("Login Success!");
-        // console.log("Logged in successfully:", user);
-        
         navigate("/a1/manifest");
       }
     } catch (error) {
@@ -42,49 +41,40 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="grid grid-cols-2 rounded-lg shadow-2xl w-[912px] h-[520px] border border-gray-300">
-        <div className="bg-primary p-4 rounded-l-lg">
-          <h1 className="font-main text-6xl mt-24 font-semibold">
-            Welcome to
-            <span className="text-7xl font-bold"> A1 Portal </span>
-          </h1>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="rounded-lg shadow-2xl w-[480px] h-auto border border-gray-300 bg-white p-8">
+        <h2 className="font-main text-4xl font-bold text-center tracking-wide">
+          Login
+        </h2>
 
-        <div className="p-4">
-          <h2 className="font-main text-4xl font-bold text-center mt-24 tracking-wide">
-            Login
-          </h2>
-
-          <form onSubmit={onSubmit} className="space-y-4 mt-4">
-            <LoginInput
-              type="text"
-              label="Login ID"
-              name="loginID"
-              placeholder="Enter your login ID"
-              required={true}
-              value={loginID}
-              onChange={(e) => setLoginID(e.target.value)}
-            />
-            <LoginInput
-              type="password"
-              name="password"
-              label="Password"
-              placeholder="*****"
-              required={true}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              canAutoComplete={false}
-            />
-            <button
-              type="submit"
-              className="cursor-pointer w-full bg-primary text-white py-2 rounded-md hover:bg-primary-hover transition"
-              //   disabled={loading}
-            >
-              Login
-            </button>
-          </form>
-        </div>
+        <form onSubmit={onSubmit} className="space-y-4 mt-6">
+          <LoginInput
+            type="text"
+            label="Login ID"
+            name="loginID"
+            placeholder="Enter your login ID"
+            required={true}
+            value={loginID}
+            onChange={(e) => setLoginID(e.target.value)}
+          />
+          <LoginInput
+            type="password"
+            name="password"
+            label="Password"
+            placeholder="*****"
+            required={true}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            canAutoComplete={false}
+          />
+          <button
+            type="submit"
+            className="cursor-pointer w-full bg-primary text-white py-2 rounded-md hover:bg-primary-hover transition"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
       </div>
     </div>
   );
