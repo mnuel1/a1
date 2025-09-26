@@ -73,12 +73,14 @@ const Manifest = () => {
     if (!result.searchFound) {
       toast.error("No result.");
     }
-
+    console.log(result)
+    
     setManifestData(result.searchResult);
     
-    if (result.searchResult.length > 0) {
-
-      setActiveTab(`${result.searchResult[0].shipment_number} - ${result.searchResult[0].tracking_number.split("/")[0]}`);
+    if (result.searchResult.length > 0) {      
+      setActiveTab(`${result.searchResult[0].shipments.shipment_number} - ${result.searchResult[0].tracking_number.split("/")[0]}`);
+      console.log(activeTab)
+      
     }
   };
 
@@ -117,6 +119,9 @@ const Manifest = () => {
   // FIX EXPORT
   // GENERATE DRS
   // GENERATE BARCODE 
+  // INTEGRATE TABLE DRIVEN
+  // ADD SETTINGS PAGE
+  // CUSTOMIZE COLUMNS
   
   const handleSubmit = async () => {
     const updates = Object.entries(editedData);
