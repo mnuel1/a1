@@ -68,7 +68,7 @@ const Manifest = () => {
   };
 
   const handleSearch = async () => {
-    console.log(activeTab);
+    
     const result = await searchDeliveries(searchTerm.trim());
     if (!result.searchFound) {
       toast.error("No result.");
@@ -77,9 +77,8 @@ const Manifest = () => {
     setManifestData(result.searchResult);
     
     if (result.searchResult.length > 0) {
-      console.log(activeTab);
-      
-      setActiveTab(`${result.searchResult[0].shipments.shipment_number}`);
+
+      setActiveTab(`${result.searchResult[0].shipment_number} - ${result.searchResult[0].tracking_number.split("/")[0]}`);
     }
   };
 
@@ -87,14 +86,14 @@ const Manifest = () => {
     new Set(
       manifestData.map(
         (item) =>
-          `${item.shipments.shipment_number} - ${item.barcode_no.split("/")[0]}`
+          `${item.shipments.shipment_number} - ${item.tracking_number.split("/")[0]}`
       )
     )
   );
 
   const filteredManifest = manifestData.filter(
     (item) =>
-      `${item.shipments.shipment_number} - ${item.barcode_no.split("/")[0]}` ===
+      `${item.shipments.shipment_number} - ${item.tracking_number.split("/")[0]}` ===
       activeTab
   );
 
@@ -106,9 +105,7 @@ const Manifest = () => {
         [field]: value,
       },
     }));
-    
-    console.log(editedData);
-    
+            
     // Also update UI immediately for better UX
     setManifestData((prev) =>
       prev.map((item) =>
@@ -116,6 +113,10 @@ const Manifest = () => {
       )
     );
   };
+  // !! PENDING 
+  // FIX EXPORT
+  // GENERATE DRS
+  // GENERATE BARCODE 
   
   const handleSubmit = async () => {
     const updates = Object.entries(editedData);
@@ -130,11 +131,11 @@ const Manifest = () => {
       for (const [deliveryId, fields] of updates) {
         await updateDelivery(deliveryId, fields);
       }
-      toast.success(`${deliveryId} saved successfully.`);
+      toast.success(`Saved successfully.`);
       setEditedData({});
     } catch (err) {
       console.error(err);
-      toast.error(`${deliveryId} update failed.`);
+      toast.error(`Update failed.`);
     } finally {
       setLoading(false);
     }
