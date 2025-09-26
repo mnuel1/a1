@@ -12,7 +12,6 @@ export const updateLoginID = async (loginID, id) => {
       throw new Error('Something went wrong. Please try again.');
     }
 
-
     const { data, error } = await supabase
       .from('user')
       .update({ login_id: loginID })

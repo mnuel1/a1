@@ -53,8 +53,8 @@ export const uploadManifest = async (manifestData) => {
       manifestData: rows,
     } = manifestData;
 
-    if (!Array.isArray(rows) || rows.length === 0) {
-      throw new Error("No valid data provided.");
+    if (!rows || rows.length === 0) {
+      throw new Error("Excel sheet is empty.");
     }
 
     const { data: existingShipment, error: shipmentError } = await supabase
@@ -81,26 +81,14 @@ export const uploadManifest = async (manifestData) => {
       if (insertError) throw insertError;
       shipmentId = insertedShipment.shipment_id;
     }
-
-    const consigneeAddresses = rows.map((row) => row["CONSIGNEE_ADDRESS"]);
-
-    const cityProvinceRegionList = await extractCityProvinceRegion(
-      consigneeAddresses
-    );
-
-    if (cityProvinceRegionList.length === 0) {
-      throw new Error("Something went wrong. Please try again");
-    }
-
-    const deliveryRows = rows.map((row, index) => {
-      const [city, province, region] =
-        cityProvinceRegionList[index]?.split(",").map((s) => s.trim()) || [];
-
+    
+    const deliveryRows = rows.map((row) => {
+            
       return {
         shipment_id: shipmentId,
         tracking_number: row["TRACKING NO."],
         qty: parseInt(row["NO. OF BOXES"]),
-        barcode_no: row["BARCODE"],
+        barcode_no: row["BARCODE NO."],
         agent: row["AGENT"],
         shipper_name: row["NAME OF SENDER"],
         shipper_ctc: row["CONTACT NO."],
@@ -108,9 +96,7 @@ export const uploadManifest = async (manifestData) => {
         consignee_address: row["CONSIGNEE_ADDRESS"],
         consignee_ctc: row["CONTACT NO._1"],
         destination: row["DESTINATION"],
-        city,
-        province,
-        region,
+        city: row["CITY"],
         status: null,
       };
     });
@@ -131,20 +117,22 @@ export const getRecentManifest = async () => {
   try {
     const { data, error } = await supabase
       .from("shipments")
-      .select("shipment_number")
+      .select("shipment_number, container_number")
       .order("shipment_number", { ascending: false });
 
     if (error) {
       console.error("Error fetching shipments:", error);
       return [];
     }
-    
-    return data.map(item => item.shipment_number);
+
+    return data.map(item => ({
+      shipment_number: item.shipment_number,
+      container_number: item.container_number
+    }));
   } catch (error) {
     throw new Error(error.message);
   }
 };
-
 
 export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5) => {
   try {

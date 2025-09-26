@@ -1,74 +1,112 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, FileSpreadsheet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useLoading } from "../context/useLoading";
+
 import toast from "react-hot-toast";
+import { ChevronDown, FileSpreadsheet, Eye, Trash, Search } from "lucide-react";
+
+import DataTable from "react-data-table-component";
 
 import {
   getDeliveries,
   getRecentManifest,
   exportToExcel,
 } from "../api/manifest";
-import Status from "./status";
-import Shipments from "./shipments";
-import { useLoading } from "../context/useLoading";
 
-const columns = [
-  "SHIPMENT NO.",
-  "CONTAINER NO.",
-  "TRACKING NO.",
-  "BARCODE",
-  "NAME OF SENDER",
-  "SENDER CONTACT NO.",
-  "AGENT",
-  "CONSIGNEE",
-  "CONSIGNEE_ADDRESS",
-  "CONTACT NO.",
-  "DESTINATION",
-  "# OF BOXES",
-  "STATUS",
+import { Status, Shipments, SearchBar } from "./filters";
+
+
+const columns = [ 
+  {
+    name: "Actions",
+    cell: (row) => (
+      <div className="flex gap-2 justify-center items-center">
+        <button
+          className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+          onClick={() => alert(`Viewing ${row.tracking_number}`)}
+        >
+          <Eye size={14} />
+        </button>
+        <button
+          className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+          onClick={() => alert(`Deleting ${row.tracking_number}`)}
+        >
+          <Trash size={14} />
+        </button>
+      </div>
+    ),
+    ignoreRowClick: true,
+    allowOverflow: true,
+    button: true,
+    width: "120px",
+  },
+  {
+    name: "Barcode No.",
+    selector: (row) => row.barcode_no || "No barcode no.",
+  },
+  {
+    name: "Tracking No.",
+    selector: (row) => row.tracking_number || "No tracking no.",
+  },
+  {
+    name: "Sender Name",
+    selector: (row) => row.shipper_name  || "No sender name",
+  },
+  {
+    name: "Sender Contact",
+    selector: (row) => row.shipper_ctc || "No sender contact",
+  },
+  {
+    name: "Consignee",
+    selector: (row) => row.consignee || "No consignee name",
+  },
+  {
+    name: "Consignee Address",
+    selector: (row) => row.consignee_address || "No consignee address",
+  },
+  {
+    name: "Consignee Contact",
+    selector: (row) => row.consignee_ctc || "No consignee contact",
+  },
+  {
+    name: "Destination",
+    selector: (row) => row.destination || "No destination",
+  },
+  {
+    name: "# of Boxes",
+    selector: (row) => row.qty || "No # of boxes",
+    sortable: true,
+  },
+  {
+    name: "Status",
+    selector: (row) => row.status || "No status yet",    
+    style: {
+      position: "sticky",
+      right: 0,
+      minWidth: "120px",
+      backgroundColor: "white",
+    },
+  },
 ];
 
-const mapToColumns = (row) => ({
-  "SHIPMENT NO.": row.shipments?.shipment_number,
-  "CONTAINER NO.": row.shipments?.container_number,
-  "TRACKING NO.": row.tracking_number,
-  "NAME OF SENDER": row.shipper_name,
-  "SENDER CONTACT NO.": row.shipper_ctc,
-  AGENT: row.agent,
-  CONSIGNEE: row.consignee || "N/A",
-  CONSIGNEE_ADDRESS: row.consignee_address,
-  "CONTACT NO.": row.consignee_ctc || "N/A",
-  BARCODE: row.barcode_no,
-  DESTINATION: row.destination,
-  "# OF BOXES": row.qty,
-  STATUS: row.status || "N/A",
-});
 
 const ManifestTable = ({ isFull }) => {
   const navigate = useNavigate();
-  const [selectedAll, setSelectedAll] = useState(false);
-  const [selectedRows, setSelectedRows] = useState([]);
+  const [filterText, setFilterText] = useState("");
   const [shipmentNumber, setShipmentNumber] = useState(null);
   const [shipmentNumbers, setShipmentNumbers] = useState([]);
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [deliveries, setDeliveries] = useState([]);
-  const [rowLimit, setRowLimit] = useState(5);
+  const [selectedStatus, setSelectedStatus] = useState("");  
+  const [deliveries, setDeliveries] = useState([]);  
+  const [rowLimit, setRowLimit] = useState(300);
   const { setLoading } = useLoading();
-
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
 
   useEffect(() => {
     const fetchManifests = async () => {
-      const numbers = await getRecentManifest();
-      if (numbers.length > 0) {
-        setShipmentNumber(numbers[0]);
-        setShipmentNumbers(numbers);
+      const shipmentNo = await getRecentManifest();
+     
+      if (shipmentNo.length > 0) {
+        setShipmentNumber(shipmentNo[0].shipment_number);
+        setShipmentNumbers(shipmentNo);
       }
     };
 
@@ -81,15 +119,13 @@ const ManifestTable = ({ isFull }) => {
         status: selectedStatus,
         shipment_number: shipmentNumber,
       },
-      currentPage,
+      1,
       rowLimit
-    ).then(({ data, totalCount }) => {
+    ).then(({ data }) => {
       setDeliveries(data);
-      console.log(data);
-
-      setTotalPages(Math.ceil(totalCount / rowLimit));
+            
     });
-  }, [selectedStatus, shipmentNumber, currentPage, rowLimit]);
+  }, [selectedStatus, shipmentNumber, rowLimit]);
 
   const handleExport = async () => {
     if (!shipmentNumber) {
@@ -107,30 +143,22 @@ const ManifestTable = ({ isFull }) => {
       .finally(() => setLoading(false));
   };
 
-  const handleShowAll = () => {
-    setRowLimit(10000);
-  };
-
-  const handleSelectAll = () => {
-    if (selectedAll) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(deliveries.map((item) => item.delivery_id));
-    }
-    setSelectedAll(!selectedAll);
-  };
-  const handleSelectRow = (id) => {
-    if (selectedRows.includes(id)) {
-      setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
-    } else {
-      setSelectedRows([...selectedRows, id]);
-    }
-  };
+  const filteredItems = deliveries.filter((item) => {
+    const search = filterText.toLowerCase();
+    return (
+      item?.tracking_number?.toString().toLowerCase().includes(search) ||
+      item?.shipper_name?.toLowerCase().includes(search) ||
+      item?.consignee?.toLowerCase().includes(search) ||
+      item?.barcode_no?.toLowerCase().includes(search) 
+      
+    );
+  });
 
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex flex-col lg:flex-row justify-between w-full gap-2">
-        <div className="flex items-center w-full gap-2">
+        <div className="flex items-center w-full gap-2 mb-4">
+          <SearchBar label="Search" value={filterText} onChange={setFilterText} />
           <Status label="Status" onChange={setSelectedStatus} />
           <Shipments
             value={shipmentNumber}
@@ -138,7 +166,7 @@ const ManifestTable = ({ isFull }) => {
             label="Shipment No."
             onChange={setShipmentNumber}
           />
-        </div>
+        </div>        
         <div className="flex items-center">
           <button
             className="flex gap-2 w-full bg-primary px-3 py-2 text-white rounded-lg whitespace-nowrap cursor-pointer hover:bg-primary-60"
@@ -148,151 +176,39 @@ const ManifestTable = ({ isFull }) => {
           </button>
         </div>
       </div>
-      <div className="relative h-full overflow-x-auto">
-        <table className="mt-2 w-full table-auto border-collapse rounded-lg border border-gray-100">
-          <thead className="bg-gray-100/50">
-            <tr>
-              <th className="p-3 text-center text-xs font-normal text-black">
-                <input
-                  type="checkbox"
-                  className="custom-checkbox"
-                  checked={selectedAll}
-                  onChange={handleSelectAll}
-                />
-              </th>
-
-              {columns.map((col) =>
-                col === "STATUS" ? (
-                  <th
-                    key={col}
-                    className="p-3 text-center text-xs font-normal text-black sticky right-0 bg-gray-100 z-10"
-                  >
-                    {col}
-                  </th>
-                ) : (
-                  <th
-                    key={col}
-                    className="p-3 text-center text-xs font-normal text-black"
-                  >
-                    {col}
-                  </th>
-                )
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {deliveries.length > 0 ? (
-              deliveries.map((row, i) => {
-                const mappedRow = mapToColumns(row);
-                return (
-                  <tr
-                    key={i}
-                    className={`${
-                      i % 2 !== 0 ? "bg-gray-100/50" : "bg-white"
-                    } hover:bg-primary/10 cursor-pointer transition`}
-                  >
-                    <td className="py-3 px-4 text-center">
-                      <input
-                        type="checkbox"
-                        className="custom-checkbox"
-                        checked={selectedRows.includes(row.delivery_id)}
-                        onChange={() => handleSelectRow(row.delivery_id)}
-                      />
-                    </td>
-
-                    {columns.map((col, j) =>
-                      col === "STATUS" ? (
-                        <td
-                          key={j}
-                          className="p-3 text-center text-xs font-normal text-black sticky right-0 bg-white"
-                        >
-                          {mappedRow[col]}
-                        </td>
-                      ) : (
-                        <td
-                          key={j}
-                          className="p-3 text-center text-xs font-normal text-black"
-                        >
-                          {mappedRow[col]}
-                        </td>
-                      )
-                    )}
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="p-6 text-center text-gray-500"
-                >
-                  There's no data yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-        {isFull ? (
-          totalPages > 1 && (
-            <div className="flex justify-between items-center">
-              <button
-                onClick={handleShowAll}
-                className="border-primary border px-2 py-1 
-                text-black/90 hover:text-black hover:border-primary-60 rounded-lg cursor-pointer"
-              >
-                Show All
-              </button>
-              {rowLimit !== 10000 && (
-                <div className="mt-4 flex items-center justify-center space-x-2">
-                  <button
-                    onClick={() => goToPage(currentPage - 1)}
-                    className={`rounded-md border border-gray-300 px-3 py-2 cursor-pointer text-xs shadow-lg ${
-                      currentPage === 1
-                        ? "cursor-not-allowed opacity-50"
-                        : "hover:bg-primary"
-                    }`}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft size={15} />
-                  </button>
-
-                  <input
-                    type="number"
-                    value={currentPage}
-                    onChange={(e) => goToPage(Number(e.target.value))}
-                    min="1"
-                    max={totalPages}
-                    className="w-fit rounded-md border border-gray-300 px-2 py-1 text-center focus:outline-none"
-                  />
-                  <span className="text-sm text-gray-600">/ {totalPages}</span>
-
-                  <button
-                    onClick={() => goToPage(currentPage + 1)}
-                    className={`rounded-md border border-gray-300 px-3 py-2 cursor-pointer text-xs shadow-lg ${
-                      currentPage === totalPages
-                        ? "cursor-not-allowed opacity-50"
-                        : "hover:bg-primary"
-                    }`}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight size={15} />
-                  </button>
-                </div>
-              )}
-            </div>
-          )
-        ) : (
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => navigate("/a1/database")}
-              className="text-sm text-blue-500 hover:underline"
-            >
-              Show More
-            </button>
-          </div>
-        )}
-      </div>
+      <div className="relative h-[700px] overflow-x-auto">
+        <DataTable        
+          columns={columns}
+          data={filteredItems}          
+          pagination
+          highlightOnHover          
+          sortIcon={<ChevronDown />}
+          persistTableHead
+          customStyles={{
+          headCells: {
+            style: {
+              fontWeight: "600",
+              fontSize: "12px",
+              backgroundColor: "#f3f4f6",
+              textAlign: "center",
+              justifyContent: "center"
+            },
+          },
+          rows: {
+            style: {
+              fontSize: "13px",
+              minHeight: "48px",
+              alignItems: "center",
+            },
+          },
+          cells: {
+            style: {
+              justifyContent: "center",
+            },
+          },         
+        }}       
+      />
+      </div>      
     </div>
   );
 };

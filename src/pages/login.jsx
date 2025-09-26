@@ -31,6 +31,7 @@ const Login = () => {
       if (user) {
         toast.success("Login Success!");
         // console.log("Logged in successfully:", user);
+        
         navigate("/a1/manifest");
       }
     } catch (error) {

@@ -1,38 +1,85 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, act } from "react";
 import { Search, UploadCloud } from "lucide-react";
 import clsx from "clsx";
 
 import toast from "react-hot-toast";
 import { useDropzoneExcel } from "../hooks/dropzone";
 import { useLoading } from "../context/useLoading";
+import { useModal } from '../context/useModal'
 import { searchDeliveries, updateDelivery } from "../api/manifest";
 
-const Manifest = () => {
+import { processSheet } from "../utils/excelReader";
 
+const Manifest = () => {
+  
   const [editedData, setEditedData] = useState({});
   const [manifestData, setManifestData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState(null);
+  const { showModal } = useModal();
 
   const { setLoading } = useLoading();
-  const { getRootProps, getInputProps, isDragActive } =
-    useDropzoneExcel(setLoading);
 
+  const handleFileDrop = (file, sheetNames) => {
+    let selectedSheet = null;
+
+    showModal({
+      title: "Select a Sheet",
+      content: (
+        <div>
+          {sheetNames.map((name) => (
+            <label key={name} className="flex gap-2">
+              <input
+                type="radio"
+                name="sheet"
+                value={name}
+                onChange={(e) => {
+                  selectedSheet = e.target.value;
+                }}
+              />
+              {name}
+            </label>
+          ))}
+        </div>
+      ),
+      onConfirm: async () => {
+        if (!selectedSheet) {
+          toast.error("Please select a sheet first.");
+          return;
+        }
+        const result = await processSheet(setLoading, file, selectedSheet);
+
+        if (!result.success) {
+          toast.error(result.message)
+          return;
+        }
+
+        toast.success("New manifest uploaded!")
+      },
+    });
+  };
+
+  const { getRootProps, getInputProps, isDragActive } =
+    useDropzoneExcel(setLoading, handleFileDrop)
+    
   const handleChange = (e) => {
     const search = e.target.value;
     setSearchTerm(search);
   };
 
   const handleSearch = async () => {
-    const result = await searchDeliveries(searchTerm);
+    console.log(activeTab);
+    const result = await searchDeliveries(searchTerm.trim());
     if (!result.searchFound) {
       toast.error("No result.");
     }
 
     setManifestData(result.searchResult);
     
-    if (result.searchResult.length > 0) {    
-      setActiveTab(`${result.searchResult[0].shipments.shipment_number} - ${result.searchResult[0].barcode_no.split("/")[0]}`);
+    if (result.searchResult.length > 0) {
+      console.log(activeTab);
+      
+      setActiveTab(`${result.searchResult[0].shipments.shipment_number}`);
     }
   };
 
@@ -59,7 +106,9 @@ const Manifest = () => {
         [field]: value,
       },
     }));
-  
+    
+    console.log(editedData);
+    
     // Also update UI immediately for better UX
     setManifestData((prev) =>
       prev.map((item) =>
@@ -68,8 +117,6 @@ const Manifest = () => {
     );
   };
   
-
- 
   const handleSubmit = async () => {
     const updates = Object.entries(editedData);
   
@@ -92,7 +139,6 @@ const Manifest = () => {
       setLoading(false);
     }
   };
-  
 
   return (
     <div className="flex h-full w-full bg-gray-50">
@@ -280,8 +326,9 @@ const Manifest = () => {
             </p>
           </div>
         )}
-      </div>
+      </div>     
     </div>
+    
   );
 };
 
