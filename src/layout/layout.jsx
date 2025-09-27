@@ -2,10 +2,10 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-
+import { getSettings } from "../api/settings";
 import Sidebar from "../ui/sidebar";
 export const Layout = () => {
-  const { user, getUser } = useAuth();  
+  const { user, getUser, updateSettings } = useAuth();  
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -13,6 +13,24 @@ export const Layout = () => {
       navigate("/login");
     }
   }, [user]);
+
+  useEffect(() => {
+    let unsubscribe;
+
+    getSettings((newSettings) => {      
+      // realtime
+      updateSettings(newSettings);
+    }).then((res) => {
+      // initial
+      updateSettings(res.data);
+      if (res?.unsubscribe) unsubscribe = res.unsubscribe;
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
 
   return (
     <div className="bg-background dark:bg-background-dark 

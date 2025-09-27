@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLoading } from "../context/useLoading";
+import { useAuth } from "../context/useAuth";
 
 import toast from "react-hot-toast";
-import { ChevronDown, FileSpreadsheet, Eye, Trash, Search } from "lucide-react";
+import { ChevronDown, FileSpreadsheet } from "lucide-react";
 
 import DataTable from "react-data-table-component";
+
+import { buildColumns } from "../utils/helper";
 
 import {
   getDeliveries,
@@ -15,83 +18,8 @@ import {
 
 import { Status, Shipments, SearchBar } from "./filters";
 
-
-const columns = [ 
-  {
-    name: "Actions",
-    cell: (row) => (
-      <div className="flex gap-2 justify-center items-center">
-        <button
-          className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
-          onClick={() => alert(`Viewing ${row.tracking_number}`)}
-        >
-          <Eye size={14} />
-        </button>
-        <button
-          className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
-          onClick={() => alert(`Deleting ${row.tracking_number}`)}
-        >
-          <Trash size={14} />
-        </button>
-      </div>
-    ),
-    ignoreRowClick: true,
-    allowOverflow: true,
-    button: true,
-    width: "120px",
-  },
-  {
-    name: "Barcode No.",
-    selector: (row) => row.barcode_no || "No barcode no.",
-  },
-  {
-    name: "Tracking No.",
-    selector: (row) => row.tracking_number || "No tracking no.",
-  },
-  {
-    name: "Sender Name",
-    selector: (row) => row.shipper_name  || "No sender name",
-  },
-  {
-    name: "Sender Contact",
-    selector: (row) => row.shipper_ctc || "No sender contact",
-  },
-  {
-    name: "Consignee",
-    selector: (row) => row.consignee || "No consignee name",
-  },
-  {
-    name: "Consignee Address",
-    selector: (row) => row.consignee_address || "No consignee address",
-  },
-  {
-    name: "Consignee Contact",
-    selector: (row) => row.consignee_ctc || "No consignee contact",
-  },
-  {
-    name: "Destination",
-    selector: (row) => row.destination || "No destination",
-  },
-  {
-    name: "# of Boxes",
-    selector: (row) => row.qty || "No # of boxes",
-    sortable: true,
-  },
-  {
-    name: "Status",
-    selector: (row) => row.status || "No status yet",    
-    style: {
-      position: "sticky",
-      right: 0,
-      minWidth: "120px",
-      backgroundColor: "white",
-    },
-  },
-];
-
-
 const ManifestTable = ({ isFull }) => {
-  const navigate = useNavigate();
+  const { getSettings } = useAuth()  
   const [filterText, setFilterText] = useState("");
   const [shipmentNumber, setShipmentNumber] = useState(null);
   const [shipmentNumbers, setShipmentNumbers] = useState([]);
@@ -99,7 +27,10 @@ const ManifestTable = ({ isFull }) => {
   const [deliveries, setDeliveries] = useState([]);  
   const [rowLimit, setRowLimit] = useState(300);
   const { setLoading } = useLoading();
-
+    
+  const columns = buildColumns(getSettings().columns.values ?? [])
+  
+  
   useEffect(() => {
     const fetchManifests = async () => {
       const shipmentNo = await getRecentManifest();
@@ -133,14 +64,15 @@ const ManifestTable = ({ isFull }) => {
       return;
     }
     setLoading(true);
-    exportToExcel(shipmentNumber)
-      .then(() => {
-        toast.success(`${shipmentNumber} manifest exported to excel.`);
-      })
-      .catch((error) => {
-        toast.error(error.message || "Export failed");
-      })
-      .finally(() => setLoading(false));
+
+    const result = exportToExcel(shipmentNumber, getSettings().columns.values ?? [])
+
+    if (!result) {
+        toast.error("We can't export it.");
+    }
+
+    toast.success(`${shipmentNumber} manifest exported to excel.`);
+    setLoading(false)   
   };
 
   const filteredItems = deliveries.filter((item) => {
@@ -149,8 +81,7 @@ const ManifestTable = ({ isFull }) => {
       item?.tracking_number?.toString().toLowerCase().includes(search) ||
       item?.shipper_name?.toLowerCase().includes(search) ||
       item?.consignee?.toLowerCase().includes(search) ||
-      item?.barcode_no?.toLowerCase().includes(search) 
-      
+      item?.barcode_no?.toLowerCase().includes(search)      
     );
   });
 

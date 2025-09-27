@@ -1,8 +1,6 @@
 import { supabase } from '../supabaseClient';
 import bcrypt from 'bcryptjs';
 
-import { getSettings } from './settings';
-
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
 export const loginWithCredentials = async (login, loginID, password) => {
@@ -23,11 +21,8 @@ export const loginWithCredentials = async (login, loginID, password) => {
     // if (!isPasswordValid) {
     //   throw new Error('Incorrect password');
     // }
-
-    const settings = await getSettings()
-        
-    if (!settings) throw new Error("Something went wrong. Please try again.")
-    login(data, settings.data);
+    
+    login(data);
     
     return data;
   } catch (error) {

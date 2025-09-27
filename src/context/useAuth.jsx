@@ -25,17 +25,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async (userData, settings) => {
+  const login = async (userData) => {
     
     const token = auth.generateSessionToken();
     const session = await auth.createSession(token, userData.id);
 
     localStorage.setItem("user", JSON.stringify(userData));
-    localStorage.setItem("settings", JSON.stringify(settings));
-    
+      
     setUser(userData);
     setSession(session);
-    setSettings(settings)
     
     auth.setSessionTokenCookie(token, session.expiresAt);
   };
@@ -50,6 +48,11 @@ export const AuthProvider = ({ children }) => {
     return settingsData ? JSON.parse(settingsData) : null;
   }
 
+  const updateSettings = (settings) => {
+    localStorage.setItem("settings", JSON.stringify(settings));
+    setSettings(settings)
+  }
+
   const logout = () => {
     setUser(null);
     setSession(null);
@@ -60,7 +63,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, settings, login, logout, getUser, getSettings}}>
+    <AuthContext.Provider value={{ user, session, settings, login, logout, getUser, getSettings, updateSettings}}>
       {children}
     </AuthContext.Provider>
   );

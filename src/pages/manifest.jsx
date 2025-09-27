@@ -116,12 +116,9 @@ const Manifest = () => {
     );
   };
   // !! PENDING 
-  // FIX EXPORT
   // GENERATE DRS
-  // GENERATE BARCODE 
   // INTEGRATE TABLE DRIVEN
   // ADD SETTINGS PAGE
-  // CUSTOMIZE COLUMNS
   
   const handleSubmit = async () => {
     const updates = Object.entries(editedData);
@@ -281,8 +278,7 @@ const Manifest = () => {
                   {/* Delivery & Agent Info */}
                   <div className="">
                     {[
-                      ["Agent", "agent"],
-                      ["Agent2", "agent2"],
+                      ["Agent", "agent"],                      
                       ["Received By", "received_by"],
                       ["Date Out for Delivery", "date_out_for_delivery"],
                       ["Date Received", "date_received"],

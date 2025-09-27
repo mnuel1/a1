@@ -1,6 +1,6 @@
 import { supabase } from "../supabaseClient";
 import { GoogleGenAI } from "@google/genai";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx"
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_KEY });
 
@@ -306,56 +306,65 @@ export const updateDelivery = async (deliveryId, updatedFields) => {
   }
 };
 
-export const exportToExcel = async (shipmentNumber) => {
+
+export const exportToExcel = async (shipmentNumber, columns) => {
   try {
     const { data, error } = await supabase
       .from("deliveries")
-      .select("*, shipments!inner(*)", { count: "exact" })
+      .select(`*, 
+        shipments!inner(
+          shipment_no:shipment_number,
+          container_no:container_number,
+          created_at,
+          total_boxes
+        )
+      `, { count: "exact" })
       .eq("shipments.shipment_number", shipmentNumber);
 
     if (error) throw error;
+    
     if (!data) throw new Error("No delivery data found.");
 
     const wb = XLSX.utils.book_new();
+    const wbBarcode = XLSX.utils.book_new();
 
     const regionMap = {
-      LUZ: "Luzon",
-      VIS: "Visayas",
+      LUZON: "Luzon",
+      VISAYAS: "Visayas",
       NCR: "NCR",
-      MIN: "Mindanao",
+      MINDANAO: "Mindanao",
     };
 
-    const provinces = {};
+    const cities = {};
     const regionSummary = {};
     const allRegionSummaryRows = [];
 
     data.forEach((item) => {
-      const region = regionMap[item.destination] || "Other";
-      const isMetroManila = item.province === "Metro Manila";
-      const sheetKey = isMetroManila ? item.city : item.province;
+      const region = regionMap[item.destination] || "Other";      
+      
+      let sheetKey = item.city?.trim().toLowerCase() || "Unknown";
+      sheetKey = sheetKey.replace(/\s*city$/, "");
+      sheetKey = sheetKey.charAt(0).toUpperCase() + sheetKey.slice(1);
 
-      if (!provinces[sheetKey]) provinces[sheetKey] = [];
-      provinces[sheetKey].push(item);
+      if (!cities[sheetKey]) cities[sheetKey] = [];
+      cities[sheetKey].push(item);
 
       if (!regionSummary[region]) regionSummary[region] = {};
       if (!regionSummary[region][sheetKey]) {
         regionSummary[region][sheetKey] = {
           Boxes: 0,
-          Delivered: 0,
-          Total: 0,
+          Delivered: 0,          
         };
       }
 
       regionSummary[region][sheetKey].Boxes += item.qty;
-      regionSummary[region][sheetKey].Delivered += item.status ? 1 : 0;
-      regionSummary[region][sheetKey].Total += 1;
+      regionSummary[region][sheetKey].Delivered += item.delivered_qty || 0;      
     });
-
-    // ✅ Combined Summary Sheet
-    let grandTotal = { Region: "Grand Total", Boxes: 0, Delivered: 0, Total: 0 };
-    Object.entries(regionSummary).forEach(([region, provinceData]) => {
-      allRegionSummaryRows.push([{ Region: region }]); // Region header row
-      const rows = Object.entries(provinceData).map(([place, summary]) => ({
+    
+    let grandTotal = { Region: "Grand Total", Boxes: 0, Delivered: 0};
+    Object.entries(regionSummary).forEach(([region, regionData]) => {
+      allRegionSummaryRows.push([{ Region: region }]);
+      const rows = Object.entries(regionData).map(([place, summary]) => ({
         Region: "",
         Province: place,
         ...summary,
@@ -364,51 +373,69 @@ export const exportToExcel = async (shipmentNumber) => {
       const total = rows.reduce(
         (acc, row) => {
           acc.Boxes += row.Boxes;
-          acc.Delivered += row.Delivered;
-          acc.Total += row.Total;
+          acc.Delivered += row.Delivered;          
           return acc;
         },
-        { Region: "", Province: "Subtotal", Boxes: 0, Delivered: 0, Total: 0 }
+        { Region: "", Province: "Subtotal", Boxes: 0, Delivered: 0}
       );
 
       rows.push(total);
-
-      // Update grand total
+      
       grandTotal.Boxes += total.Boxes;
-      grandTotal.Delivered += total.Delivered;
-      grandTotal.Total += total.Total;
-
-      allRegionSummaryRows.push(...rows, [{}]); // section + gap
+      grandTotal.Delivered += total.Delivered;      
+      allRegionSummaryRows.push(...rows, [{}]);
     });
-
+        
     allRegionSummaryRows.push([grandTotal]);
+    
     const flattenedSummary = allRegionSummaryRows.flat();
     const wsSummary = XLSX.utils.json_to_sheet(flattenedSummary);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+    
+    const scannableColumns = columns.filter((col) => col.displayFlags.scannable);        
+    const barcodeRows = data.flatMap((r) => {
+      const scannableValues = scannableColumns.map((col) => {
+        let value = r[col.key] || r[col.key] !== undefined ? r[col.key] : r.shipments?.[col.key];        
+        return value ?? "";
+      });
 
-    // ✅ Province/City Sheets
-    Object.entries(provinces).forEach(([sheetName, rows]) => {
-      const formattedRows = rows.map((r) => ({
-        "SHIPMENT NO.": r.shipments?.shipment_number,
-        "CONTAINER NO.": r.shipments?.container_number,
-        "TRACKING NO.": r.tracking_number || "",
-        "NAME OF SENDER": r.shipper_name,
-        "CONTACT NO.": r.shipper_ctc,
-        AGENT: r.agent,
-        CONSIGNEE: r.consignee,
-        CONSIGNEE_ADDRESS: r.consignee_address,
-        "CONTACT NO.": r.consignee_ctc,
-        BARCODE: r.barcode_no,
-        DESTINATION: r.destination,
-        "NO. OF BOXES": r.qty,
+      return Array.from({ length: r.qty || 1 }, () => ({
+        DATA: scannableValues.join("\t"),
+        BARCODE: r.barcode_no || "",
       }));
+    });    
+
+    const wsBarcodes = XLSX.utils.json_to_sheet(barcodeRows);
+    XLSX.utils.book_append_sheet(wbBarcode, wsBarcodes, "Barcodes");
+    
+    const getRowValue = (row, col) => {
+      if (row[col.key] !== undefined) return row[col.key];
+      if (row.shipments && col.key in row.shipments) return row.shipments[col.key];
+      return "";
+    };
+
+    Object.entries(cities).forEach(([sheetName, rows]) => {
+      const printableColumns = columns.filter((col) => col.displayFlags.printable);
+
+      const formattedRows = rows.map((r) => {
+        const rowObj = {};
+        printableColumns.forEach((col) => {
+          rowObj[col.label.toUpperCase()] = getRowValue(r, col);
+          console.log(getRowValue(r, col));
+          
+        });
+        return rowObj;
+      });
 
       const ws = XLSX.utils.json_to_sheet(formattedRows);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     });
 
     XLSX.writeFile(wb, `ManifestExport_${shipmentNumber}.xlsx`);
+    XLSX.writeFile(wbBarcode, `Barcodes_${shipmentNumber}.xlsx`);
+    return true
   } catch (error) {
     console.error("Excel Export Error:", error.message);
+    return false
   }
 };
