@@ -1,4 +1,4 @@
-import React, { useState, useEffect, act } from "react";
+import { useState } from "react";
 import { Search, UploadCloud } from "lucide-react";
 import clsx from "clsx";
 
@@ -7,11 +7,13 @@ import { useDropzoneExcel } from "../hooks/dropzone";
 import { useLoading } from "../context/useLoading";
 import { useModal } from '../context/useModal'
 import { searchDeliveries, updateDelivery } from "../api/manifest";
-
+import { useAuth } from "../context/useAuth";
 import { processSheet } from "../utils/excelReader";
 
+import CardManifest from "../ui/cardManifest";
+
 const Manifest = () => {
-  
+  const { getSettings } = useAuth()  
   const [editedData, setEditedData] = useState({});
   const [manifestData, setManifestData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,7 +21,10 @@ const Manifest = () => {
   const { showModal } = useModal();
 
   const { setLoading } = useLoading();
-
+  
+  const settings = getSettings().columns.values ?? []
+  const status = getSettings().delivery_status.values ?? []
+  
   const handleFileDrop = (file, sheetNames) => {
     let selectedSheet = null;
 
@@ -73,14 +78,10 @@ const Manifest = () => {
     if (!result.searchFound) {
       toast.error("No result.");
     }
-    console.log(result)
-    
     setManifestData(result.searchResult);
     
     if (result.searchResult.length > 0) {      
       setActiveTab(`${result.searchResult[0].shipments.shipment_number} - ${result.searchResult[0].tracking_number.split("/")[0]}`);
-      console.log(activeTab)
-      
     }
   };
 
@@ -131,7 +132,12 @@ const Manifest = () => {
     setLoading(true);
     try {
       for (const [deliveryId, fields] of updates) {
-        await updateDelivery(deliveryId, fields);
+        const response = await updateDelivery(deliveryId, fields);
+        console.log(response);
+        
+        if (response.error) {
+          throw response.error
+        }
       }
       toast.success(`Saved successfully.`);
       setEditedData({});
@@ -191,118 +197,14 @@ const Manifest = () => {
           </div>
     
           {/* Deliveries */}
-          <div className="space-y-6">
-            {filteredManifest.map((item) => (
-              <div
-                key={item.delivery_id}
-                className="border rounded-lg p-6 shadow-sm bg-white"
-              >
-                <div className="space-y-2">
-                  <div className="flex gap-4 flex-wrap">
-                    <p>
-                      <strong className="text-black font-semibold">Shipment Number:</strong>{" "}
-                      {item.shipments.shipment_number}
-                    </p>
-                    <p>
-                      <strong className="text-black font-semibold">Container Number:</strong>{" "}
-                      {item.shipments.container_number}
-                    </p>
-                    <p>
-                      <strong className="text-black font-semibold">Tracking Number:</strong>{" "}
-                      {item.tracking_number}
-                    </p>
-                  </div>
-                  <div className="flex gap-4 flex-wrap">
-                    <label className="text-sm">
-                      <strong className="text-black font-semibold">Barcode:</strong>{" "}
-                      <input
-                        value={item.barcode_no || ""}
-                        onChange={(e) => handleFieldChange(item.delivery_id, "barcode_no", e.target.value)}
-                        className="border px-2 py-1 rounded w-32"
-                      />
-                    </label>
-                    <label className="text-sm">
-                      <strong className="text-black font-semibold">No. of Boxes:</strong>{" "}
-                      <input
-                        type="number"
-                        value={item.qty || ""}
-                        onChange={(e) => handleFieldChange(item.delivery_id, "qty", e.target.value)}
-                        className="border px-2 py-1 rounded w-24"
-                      />
-                    </label>
-                  </div>
-                </div>
-    
-                <hr className="my-4 text-gray-400" />
-    
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {/* Shipper & Consignee */}
-                  <div className="space-y-2">
-                    {[
-                      ["Shipper", "shipper_name"],
-                      ["Shipper Contact", "shipper_ctc"],
-                      ["Consignee", "consignee"],
-                      ["Consignee Contact", "consignee_ctc"],
-                    ].map(([label, field]) => (
-                      <label key={field} className="block text-sm">
-                        <strong className="text-black font-semibold">{label}:</strong>{" "}
-                        <input
-                          value={item[field] || ""}
-                          onChange={(e) => handleFieldChange(item.delivery_id, field, e.target.value)}
-                          className="border px-2 py-1 rounded w-full"
-                        />
-                      </label>
-                    ))}
-                  </div>
-    
-                  {/* Address & Destination */}
-                  <div className="">
-                    {[
-                      ["Address", "consignee_address"],
-                      ["City", "city"],
-                      ["Province", "province"],
-                      ["Region", "region"],
-                      ["Destination", "destination"],
-                    ].map(([label, field]) => (
-                      <label key={field} className="block text-sm">
-                        <strong className="text-black font-semibold">{label}:</strong>{" "}
-                        <input
-                          value={item[field] || ""}
-                          onChange={(e) => handleFieldChange(item.delivery_id, field, e.target.value)}
-                          className="border px-2 py-1 rounded w-full"
-                        />
-                      </label>
-                    ))}
-                  </div>
-    
-                  {/* Delivery & Agent Info */}
-                  <div className="">
-                    {[
-                      ["Agent", "agent"],                      
-                      ["Received By", "received_by"],
-                      ["Date Out for Delivery", "date_out_for_delivery"],
-                      ["Date Received", "date_received"],
-                    ].map(([label, field]) => (
-                      <label key={field} className="block text-sm">
-                        <strong className="text-black font-semibold">{label}:</strong>{" "}
-                        <input
-                          value={item[field] || ""}
-                          onChange={(e) => handleFieldChange(item.delivery_id, field, e.target.value)}
-                          className="border px-2 py-1 rounded w-full"
-                        />
-                      </label>
-                    ))}
-                  </div>                  
-                </div>
+          <CardManifest
+            settings={settings} 
+            deliveries={filteredManifest}
+            handleFieldChange={handleFieldChange}
+            handleSubmit={handleSubmit}
+            status={status}
+          />
 
-                <button
-                  onClick={handleSubmit}
-                  className="px-4 py-1 bg-primary hover:bg-primary-60 text-white rounded-lg my-2 cursor-pointer">
-                  Update
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
         ) : (
           <div

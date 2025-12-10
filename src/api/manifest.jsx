@@ -287,14 +287,15 @@ export const createDelivery = async (formData) => {
 };
 
 export const updateDelivery = async (deliveryId, updatedFields) => {
-  try {
+  try {    
     const { data, error } = await supabase
       .from("deliveries")
       .update(updatedFields)
-      .eq("delivery_id", parseInt(deliveryId));
-
+      .eq("delivery_id", deliveryId)
+      .select();
+      
     if (error) throw error;
-
+    
     if (!data || data.length === 0) {
       return { error: true, message: `${deliveryId} not found` };
     }
@@ -421,8 +422,6 @@ export const exportToExcel = async (shipmentNumber, columns) => {
         const rowObj = {};
         printableColumns.forEach((col) => {
           rowObj[col.label.toUpperCase()] = getRowValue(r, col);
-          console.log(getRowValue(r, col));
-          
         });
         return rowObj;
       });

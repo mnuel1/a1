@@ -7,6 +7,7 @@ export const DISPLAYFLAG = {
   TABLE: 8,
   PRINTABLE: 16,
   SCANNABLE: 32,
+  CARD: 64
 };
 
 export const hasDisplayFlag = (display, flag) => (display & flag) === flag;
@@ -17,9 +18,9 @@ export const getDisplayFlags = (col) => ({
   required: hasDisplayFlag(col.display, DISPLAYFLAG.REQUIRED),
   table: hasDisplayFlag(col.display, DISPLAYFLAG.TABLE),
   printable: hasDisplayFlag(col.display, DISPLAYFLAG.PRINTABLE),
-   scannable: hasDisplayFlag(col.display, DISPLAYFLAG.SCANNABLE),
+  scannable: hasDisplayFlag(col.display, DISPLAYFLAG.SCANNABLE),
 });
-"			41496	JORINA MAE BAYLE	4433183854	VER	MARISSA V. BAYLE	VILLA MERCEDES, SAN QUINTIN, ABRA 2808	ABRA	9285400441	LUZON	3"
+
 export const processColumns = (columns) => {
   return columns.map((col) => ({
     ...col,
