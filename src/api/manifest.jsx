@@ -1,4 +1,4 @@
-import { supabase } from "../supabaseClient";
+import { supabase, supaClient } from "../supabaseClient";
 import { GoogleGenAI } from "@google/genai";
 import * as XLSX from "xlsx"
 
@@ -68,22 +68,22 @@ export const uploadManifest = async (manifestData) => {
     let shipmentId = existingShipment?.shipment_id;
 
     if (!shipmentId) {
-      const { data: insertedShipment, error: insertError } = await supabase
-        .from("shipments")
-        .insert({
+      const { data: insertedShipment, error: insertErr } = await supaClient.insert(
+        "shipments",
+        {
           shipment_number: shipmentNo,
           container_number: containerNo,
           total_boxes: parseInt(totalBoxes),
-        })
-        .select("shipment_id")
-        .single();
+        },
+        "shipment_id",
+        true
+      );
 
-      if (insertError) throw insertError;
+      if (insertErr) throw insertErr;
       shipmentId = insertedShipment.shipment_id;
     }
-    
+
     const deliveryRows = rows.map((row) => {
-            
       return {
         shipment_id: shipmentId,
         tracking_number: row["TRACKING NO."],
@@ -101,15 +101,12 @@ export const uploadManifest = async (manifestData) => {
       };
     });
 
-    const { error: insertError } = await supabase
-      .from("deliveries")
-      .insert(deliveryRows);
-
-    if (insertError) throw insertError;
+    const { error: insertErr } = await supaClient.insert("deliveries", deliveryRows);
+    if (insertErr) throw insertErr;
 
     return { success: true };
   } catch (error) {
-    throw new Error(error.message);``
+    throw new Error(error.message); ``
   }
 };
 
@@ -134,7 +131,7 @@ export const getRecentManifest = async () => {
   }
 };
 
-export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5) => {
+export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restrictions = {}) => {
   try {
     let query = supabase
       .from("deliveries")
@@ -147,6 +144,29 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5) => {
 
     if (filters.status && filters.status !== "ALL") {
       query = query.eq("status", filters.status);
+    }
+
+    if (restrictions.region?.length) {
+      const upperRegions = restrictions.region
+        .filter(r => r && r.trim() !== "")
+        .map(r => r.toUpperCase());
+
+      if (upperRegions.length) {
+        query = query.in("destination", upperRegions);
+      }
+    }
+
+    if (restrictions.city?.length) {
+      const normalizedCities = restrictions.city
+        .filter(c => c && c.trim() !== "")
+        .map(c => c.toLowerCase().replace(" city", "").trim());
+
+      if (normalizedCities.length) {
+        query = query.in(
+          "city",
+          normalizedCities.map(c => c.charAt(0).toUpperCase() + c.slice(1))
+        );
+      }
     }
 
     const { data, error, count } = await query;
@@ -163,13 +183,13 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5) => {
   }
 };
 
-export const searchDeliveries = async (query) => {
+export const searchDeliveries = async (query, restrictions = {}) => {
   try {
     if (!query || !query.trim()) {
       throw new Error("Search query cannot be empty");
     }
 
-    const { data: initial, error: initialError } = await supabase
+    let queryBuilder = supabase
       .from("deliveries")
       .select(
         `
@@ -184,6 +204,23 @@ export const searchDeliveries = async (query) => {
         `shipper_name.ilike.%${query}%,tracking_number.ilike.%${query}%,barcode_no.ilike.%${query}%,consignee.ilike.%${query}%`
       )
       .limit(1);
+
+    if (restrictions.region?.length) {
+      queryBuilder = queryBuilder.in(
+        "destination",
+        restrictions.region.map((r) => r.toUpperCase())
+      );
+    }
+
+    if (restrictions.city?.length) {
+      restrictions.city.forEach((city) => {
+        const normalized = city.toLowerCase().replace(" city", "").trim();
+        queryBuilder = queryBuilder.ilike("city", `%${normalized}%`);
+      });
+    }
+
+
+    const { data: initial, error: initialError } = await queryBuilder.limit(50);
 
     if (initialError) throw initialError;
 
@@ -258,26 +295,24 @@ export const createDelivery = async (formData) => {
     let shipmentId = existingShipment?.shipment_id;
 
     if (!shipmentId) {
-      const { data: newShipment, error: insertError } = await supabase
-        .from("shipments")
-        .insert({
+      const { data: newShipment } = await supaClient.insert(
+        "shipments",
+        {
           shipment_number: shipmentNumber,
           container_number: containerNumber,
           total_boxes: totalBoxes,
-        })
-        .select("shipment_id")
-        .single();
+        },
+        "shipment_id",
+        true
+      );
 
-      if (insertError) throw insertError;
       shipmentId = newShipment.shipment_id;
     }
 
-    const { error: deliveryError } = await supabase.from("deliveries").insert({
+    await supaClient.insert("deliveries", {
       ...deliveryData,
       shipment_id: shipmentId,
     });
-
-    if (deliveryError) throw deliveryError;
 
     return { success: "Delivery created successfully" };
   } catch (error) {
@@ -287,15 +322,16 @@ export const createDelivery = async (formData) => {
 };
 
 export const updateDelivery = async (deliveryId, updatedFields) => {
-  try {    
-    const { data, error } = await supabase
-      .from("deliveries")
-      .update(updatedFields)
-      .eq("delivery_id", deliveryId)
-      .select();
-      
+  try {
+    const { data, error } = await supaClient.update(
+      "deliveries",
+      { delivery_id: deliveryId },
+      updatedFields,
+      "*"
+    );
+
     if (error) throw error;
-    
+
     if (!data || data.length === 0) {
       return { error: true, message: `${deliveryId} not found` };
     }
@@ -306,7 +342,6 @@ export const updateDelivery = async (deliveryId, updatedFields) => {
     return { error: error.message };
   }
 };
-
 
 export const exportToExcel = async (shipmentNumber, columns) => {
   try {
@@ -323,7 +358,7 @@ export const exportToExcel = async (shipmentNumber, columns) => {
       .eq("shipments.shipment_number", shipmentNumber);
 
     if (error) throw error;
-    
+
     if (!data) throw new Error("No delivery data found.");
 
     const wb = XLSX.utils.book_new();
@@ -341,8 +376,8 @@ export const exportToExcel = async (shipmentNumber, columns) => {
     const allRegionSummaryRows = [];
 
     data.forEach((item) => {
-      const region = regionMap[item.destination] || "Other";      
-      
+      const region = regionMap[item.destination] || "Other";
+
       let sheetKey = item.city?.trim().toLowerCase() || "Unknown";
       sheetKey = sheetKey.replace(/\s*city$/, "");
       sheetKey = sheetKey.charAt(0).toUpperCase() + sheetKey.slice(1);
@@ -354,15 +389,15 @@ export const exportToExcel = async (shipmentNumber, columns) => {
       if (!regionSummary[region][sheetKey]) {
         regionSummary[region][sheetKey] = {
           Boxes: 0,
-          Delivered: 0,          
+          Delivered: 0,
         };
       }
 
       regionSummary[region][sheetKey].Boxes += item.qty;
-      regionSummary[region][sheetKey].Delivered += item.delivered_qty || 0;      
+      regionSummary[region][sheetKey].Delivered += item.delivered_qty || 0;
     });
-    
-    let grandTotal = { Region: "Grand Total", Boxes: 0, Delivered: 0};
+
+    let grandTotal = { Region: "Grand Total", Boxes: 0, Delivered: 0 };
     Object.entries(regionSummary).forEach(([region, regionData]) => {
       allRegionSummaryRows.push([{ Region: region }]);
       const rows = Object.entries(regionData).map(([place, summary]) => ({
@@ -374,29 +409,29 @@ export const exportToExcel = async (shipmentNumber, columns) => {
       const total = rows.reduce(
         (acc, row) => {
           acc.Boxes += row.Boxes;
-          acc.Delivered += row.Delivered;          
+          acc.Delivered += row.Delivered;
           return acc;
         },
-        { Region: "", Province: "Subtotal", Boxes: 0, Delivered: 0}
+        { Region: "", Province: "Subtotal", Boxes: 0, Delivered: 0 }
       );
 
       rows.push(total);
-      
+
       grandTotal.Boxes += total.Boxes;
-      grandTotal.Delivered += total.Delivered;      
+      grandTotal.Delivered += total.Delivered;
       allRegionSummaryRows.push(...rows, [{}]);
     });
-        
+
     allRegionSummaryRows.push([grandTotal]);
-    
+
     const flattenedSummary = allRegionSummaryRows.flat();
     const wsSummary = XLSX.utils.json_to_sheet(flattenedSummary);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-    
-    const scannableColumns = columns.filter((col) => col.displayFlags.scannable);        
+
+    const scannableColumns = columns.filter((col) => col.displayFlags.scannable);
     const barcodeRows = data.flatMap((r) => {
       const scannableValues = scannableColumns.map((col) => {
-        let value = r[col.key] || r[col.key] !== undefined ? r[col.key] : r.shipments?.[col.key];        
+        let value = r[col.key] || r[col.key] !== undefined ? r[col.key] : r.shipments?.[col.key];
         return value ?? "";
       });
 
@@ -404,11 +439,11 @@ export const exportToExcel = async (shipmentNumber, columns) => {
         DATA: scannableValues.join("\t"),
         BARCODE: r.barcode_no || "",
       }));
-    });    
+    });
 
     const wsBarcodes = XLSX.utils.json_to_sheet(barcodeRows);
     XLSX.utils.book_append_sheet(wbBarcode, wsBarcodes, "Barcodes");
-    
+
     const getRowValue = (row, col) => {
       if (row[col.key] !== undefined) return row[col.key];
       if (row.shipments && col.key in row.shipments) return row.shipments[col.key];
@@ -432,6 +467,10 @@ export const exportToExcel = async (shipmentNumber, columns) => {
 
     XLSX.writeFile(wb, `ManifestExport_${shipmentNumber}.xlsx`);
     XLSX.writeFile(wbBarcode, `Barcodes_${shipmentNumber}.xlsx`);
+
+    // log it 
+    await supaClient.export("deliveries")
+
     return true
   } catch (error) {
     console.error("Excel Export Error:", error.message);

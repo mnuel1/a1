@@ -9,10 +9,11 @@ import { updateStatusStaff, updateStaffInfo } from "../api/staff";
 import { useLoading } from "../context/useLoading";
 
 
-const columns = ["NAME", "ROLE", "ACCESS", "STATUS", "ACTIONS"];
+// const columns = ["NAME", "ROLE", "ACCESS", "STATUS", "ACTIONS"];
+const columns = ["NAME", "ROLE", "STATUS", "ACTIONS"];
 const rowLimit = 5;
 
-const StaffTable = ({ staffs = [], setStaffs }) => {
+const StaffTable = ({ staffs = [], setStaffs, title }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -42,7 +43,6 @@ const StaffTable = ({ staffs = [], setStaffs }) => {
       setCurrentPage(page);
     }
   };
-
   const updateStaffStatus = async () => {
     setLoading(true);
     try {
@@ -66,12 +66,12 @@ const StaffTable = ({ staffs = [], setStaffs }) => {
   };
 
   const updateStaff = async (updatedStaff) => {
-   
+
     setLoading(true);
     try {
       if (!updatedStaff) {
         throw new Error("Please select a staff first.");
-      }     
+      }
       const result = await updateStaffInfo(updatedStaff);
 
       if (!result.success) {
@@ -89,7 +89,7 @@ const StaffTable = ({ staffs = [], setStaffs }) => {
           staff.id === updatedStaff.id ? { ...staff, ...updatedStaff } : staff
         )
       );
-    }    
+    }
   };
 
   const openEditModal = (staff) => {
@@ -112,23 +112,23 @@ const StaffTable = ({ staffs = [], setStaffs }) => {
       />
       <ConfirmModal
         isOpen={isConfirmOpen}
-        message={`Are you sure you want to change the status of this staff to ${
-          selectedStaff?.status === "Active" ? "Inactive" : "Active"
-        }?`}
+        message={`Are you sure you want to change the status of this staff to ${selectedStaff?.status === "Active" ? "Inactive" : "Active"
+          }?`}
         onClose={() => setIsConfirmOpen(false)}
         onConfirm={updateStaffStatus}
       />
 
       <div className="relative h-full overflow-x-auto p-4">
         <div className="mb-4 flex items-center justify-between">
-          <div className="focus-within:ring-primary mb-4 flex w-full items-center space-x-1 rounded-lg border border-gray-300 px-2 py-1 focus-within:ring-2">
+          <div className="focus-within:ring-primary mb-4 flex w-full items-center space-x-1 
+                    rounded-lg border border-gray-300 px-2 py-1 focus-within:ring-2">
             <Search size={20} className="text-primary" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Name, Role, Access, or Status..."
-              className="w-full border-0 p-2 text-xs outline-none focus:ring-0"
+              placeholder={`Search ${title || "data"}...`}
+              className="w-full border-0 p-2 text-xs outline-none"
             />
           </div>
         </div>
@@ -151,12 +151,11 @@ const StaffTable = ({ staffs = [], setStaffs }) => {
               >
                 <td className="text-md p-3 text-center">{row.name}</td>
                 <td className="text-md p-3 text-center">{row.role}</td>
-                <td className="text-md p-3 text-center">{row.access?.join(", ") || ""}</td>
+                {/* <td className="text-md p-3 text-center">{row.access.role}</td> */}
                 <td className="text-md p-3 text-center">
                   <span
-                    className={`rounded-lg px-2 py-1 ${
-                      row.status === "Active" ? "bg-green-300" : "bg-red-300"
-                    }`}
+                    className={`rounded-lg px-2 py-1 ${row.status === "Active" ? "bg-green-300" : "bg-red-300"
+                      }`}
                   >
                     {row.status}
                   </span>
@@ -216,4 +215,55 @@ const StaffTable = ({ staffs = [], setStaffs }) => {
   );
 };
 
-export default StaffTable;
+const UsersTable = ({ staffs, setStaffs }) => {
+
+  const admins = useMemo(
+    () => staffs.filter(s => s.role?.toLowerCase() === "admin"),
+    [staffs]
+  );
+
+  const staffUsers = useMemo(
+    () => staffs.filter(s => s.role?.toLowerCase() === "staff"),
+    [staffs]
+  );
+
+  const agents = useMemo(
+    () => staffs.filter(s => s.role?.toLowerCase() === "agent"),
+    [staffs]
+  );
+
+  return (
+    <div className="w-full flex flex-col gap-6">
+      <div className="border border-gray-200 p-4 rounded-md">
+        <h2 className="text-xl font-bold mb-2">Admins</h2>
+        <StaffTable
+          staffs={admins}
+          setStaffs={setStaffs}
+          title="Admins"
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="border border-gray-200 p-4 rounded-md">
+          <h2 className="text-xl font-bold mb-2">Staff</h2>
+          <StaffTable
+            staffs={staffUsers}
+            setStaffs={setStaffs}
+            title="Staff"
+          />
+        </div>
+        <div className="border border-gray-200 p-4 rounded-md">
+          <h2 className="text-xl font-bold mb-2">Agents</h2>
+          <StaffTable
+            staffs={agents}
+            setStaffs={setStaffs}
+            title="Agents"
+          />
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default UsersTable;

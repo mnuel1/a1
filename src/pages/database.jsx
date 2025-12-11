@@ -1,12 +1,6 @@
-import React, { useState, useEffect } from "react";
-
-import { useLoading } from "../context/useLoading";
-
 import ManifestTable from "../ui/table";
 
 const Database = () => {  
-  const { setLoading } = useLoading();
-
   return (
     <div className="flex h-full w-full">
       <div className="relative flex h-full w-full flex-col p-6">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useLoading } from "../context/useLoading";
 import { useAuth } from "../context/useAuth";
+import { useLoading } from "../context/useLoading";
 import { updateDelivery } from "../api/manifest";
 
 import toast from "react-hot-toast";
@@ -20,7 +20,7 @@ import { Status, Shipments, SearchBar } from "./filters";
 import CardManifest from "./cardManifest";
 
 const ManifestTable = ({ isFull }) => {
-  const { getSettings } = useAuth()
+  const { can, getRestrictions, getSettings } = useAuth()
   const [editedData, setEditedData] = useState({});
   const [filterText, setFilterText] = useState("");
   const [shipmentNumber, setShipmentNumber] = useState(null);
@@ -36,7 +36,7 @@ const ManifestTable = ({ isFull }) => {
   const columns = buildColumns(getSettings().columns.values ?? [], (row, action) => {
     setSelectedDelivery(row);
     setModalMode(action); // 'view' or 'edit'
-  });
+  }, can('edit'));
 
 
   const status = getSettings().delivery_status.values ?? []
@@ -55,16 +55,21 @@ const ManifestTable = ({ isFull }) => {
   }, []);
 
   useEffect(() => {
+    const restrictions = getRestrictions();
+    setLoading(true)
+
     getDeliveries(
       {
         status: selectedStatus,
-        shipment_number: shipmentNumber,
+        shipment_number: shipmentNumber
       },
       1,
-      rowLimit
+      rowLimit,
+      restrictions
     ).then(({ data }) => {
       setDeliveries(data);
 
+      setLoading(false)
     });
   }, [selectedStatus, shipmentNumber]);
 
@@ -109,12 +114,12 @@ const ManifestTable = ({ isFull }) => {
           />
         </div>
         <div className="flex items-center">
-          <button
+          { can('export') && <button
             className="flex gap-2 w-full bg-primary px-3 py-2 text-white rounded-lg whitespace-nowrap cursor-pointer hover:bg-primary-60"
             onClick={handleExport}
           >
             <FileSpreadsheet /> Export to Excel
-          </button>
+          </button> }
         </div>
       </div>
       <div className="relative h-[700px] overflow-x-auto">
@@ -154,7 +159,7 @@ const ManifestTable = ({ isFull }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white p-6 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-auto relative">
             <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              className="absolute top-2 right-4 text-red-500 hover:text-red-700 px-2 py-1 rounded-full text-2xl font-bold cursor-pointer"
               onClick={() => setSelectedDelivery(null)}
             >
               ✕
@@ -165,6 +170,7 @@ const ManifestTable = ({ isFull }) => {
               deliveries={[selectedDelivery]}
               status={status}
               isReadOnly={modalMode === "view"}
+              canEdit={can("edit")}
               handleFieldChange={(id, key, value) => {
                 if (modalMode === "edit") {
                   // Only update selectedDelivery for modal display

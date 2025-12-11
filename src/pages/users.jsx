@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import StaffModal from '../ui/staffModal';
-import StaffTable from '../ui/staffTable';
+import UsersTable from '../ui/staffTable';
 
 import { fetchStaffs, addStaff } from '../api/staff';
 
@@ -75,7 +75,7 @@ const Staffs = () => {
           </button>
         </div>
         
-        <StaffTable staffs={staffs} setStaffs={setStaffs} />
+        <UsersTable staffs={staffs} setStaffs={setStaffs} />
         
       </div>
     </div>

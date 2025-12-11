@@ -9,12 +9,9 @@ export const fetchStaffs = async () => {
     if (error) {
       throw new Error(error.message);
     }
-
+    
     const formattedStaffs = data.map((staff) => ({
-      ...staff,
-      access: Array.isArray(staff.access)
-        ? staff.access.map((a) => a.permission || a)
-        : [],
+      ...staff
     }));
 
     return formattedStaffs;
@@ -25,52 +22,41 @@ export const fetchStaffs = async () => {
 
 export const addStaff = async (staff) => {
   try {
-    const { error } = await supabase.from("user").insert([staff]);
+    const { data, error } = await supaClient.insert("user", staff);
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw error;
 
-    return { success: true };
-  } catch (error) {
-    throw new Error(error.message);
+    return { success: true, data };
+  } catch (err) {
+    throw new Error(err.message || "Failed to add staff");
   }
 };
 
 export const updateStaffInfo = async (staff) => {
   try {
     const { id, ...updateFields } = staff;
+    if (!id) throw new Error("Staff ID is required");
 
-    const { error } = await supabase
-      .from("user")
-      .update(updateFields)
-      .eq("id", id);
+    const { data, error } = await supaClient.update("user", { id }, updateFields);
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw error;
 
-    return { success: true };
-  } catch (error) {
-    throw new Error(error.message);
+    return { success: true, data };
+  } catch (err) {
+    throw new Error(err.message || "Failed to update staff info");
   }
 };
 
-export const updateStatusStaff = async (staff) => {
+export const updateStatusStaff = async ({ id, status }) => {
   try {
-    const { id, status } = staff;
+    if (!id) throw new Error("Staff ID is required");
 
-    const { error } = await supabase
-      .from("user")
-      .update({ status: status })
-      .eq("id", id);
+    const { data, error } = await supaClient.update("user", { id }, { status });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw error;
 
-    return { success: true };
-  } catch (error) {
-    throw new Error(error.message);
+    return { success: true, data };
+  } catch (err) {
+    throw new Error(err.message || "Failed to update staff status");
   }
 };

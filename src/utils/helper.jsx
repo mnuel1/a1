@@ -1,6 +1,6 @@
 import { Eye, Edit, Trash } from "lucide-react";
 
-export const buildColumns = (config, onAction) => {
+export const buildColumns = (config, onAction, canEdit) => {
   return config
     .filter((col) => col.displayFlags.table)
     .map((col) => {
@@ -15,12 +15,14 @@ export const buildColumns = (config, onAction) => {
               >
                 <Eye size={14} />
               </button>
-              <button
-                className="text-blue-500 py-1 rounded text-xs hover:text-blue-600 cursor-pointer"
-                onClick={() => onAction?.(row, "edit")}
-              >
-                <Edit size={14} />
-              </button>
+              {canEdit && 
+                <button
+                  className="text-blue-500 py-1 rounded text-xs hover:text-blue-600 cursor-pointer"
+                  onClick={() => onAction?.(row, "edit")}
+                >
+                  <Edit size={14} />
+                </button>
+              }
               {/* Optional delete */}
               {/* <button
                 className="text-red-500 py-1 rounded text-xs hover:text-red-600 cursor-pointer"

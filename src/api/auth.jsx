@@ -1,31 +1,33 @@
-import { supabase } from '../supabaseClient';
-import bcrypt from 'bcryptjs';
+import { supabase, supaClient, setGetCurrentUser } from "../supabaseClient";
+import bcrypt from "bcryptjs";
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
 export const loginWithCredentials = async (login, loginID, password) => {
   try {
-    
-    const { data, error } = await supabase
-      .from('user')
-      .select('id, name, password, role, access, status, login_id')
-      .eq('login_id', loginID)
-      .single();
-    
+    const { data, error } = await supaClient.select(
+      "user",
+      "id, name, password, role, access, status, login_id",
+      { login_id: loginID },
+      true
+    );
+
     if (error || !data) {
-      throw new Error('Account doesn\'t exist');
+      throw new Error("Account doesn't exist");
     }
 
     // const isPasswordValid = await bcrypt.compare(password, data.password);
-    
     // if (!isPasswordValid) {
-    //   throw new Error('Incorrect password');
+    //   throw new Error("Incorrect password");
     // }
-    
+
+    setGetCurrentUser(() => data);
+
     login(data);
-    
     return data;
   } catch (error) {
+    console.log(error);
+
     throw new Error(error.message);
   }
 };
@@ -35,16 +37,12 @@ export const createSessionInDb = async (sessionId, userId) => {
     const session = {
       id: sessionId,
       user_id: userId,
-      expires_at: new Date(Date.now() + DAY_IN_MS * 30) // 30 days expiration
+      expires_at: new Date(Date.now() + DAY_IN_MS * 30),
     };
 
-    const { data, error } = await supabase
-      .from('session')
-      .insert([session]);
+    const { data, error } = await supaClient.insert("session", session);
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
 
     return data;
   } catch (error) {
@@ -60,12 +58,10 @@ export const validateSessionTokenInDb = async (sessionId) => {
       .eq('id', sessionId)
       .single();
 
-    if (error || !session) {
-      return { session: null, user: null };
-    }
+    if (error || !session) return { session: null, user: null };
 
-    const sessionExpired = Date.now() >= new Date(session.expires_at).getTime();
-    if (sessionExpired) {
+    const expired = Date.now() >= new Date(session.expires_at).getTime();
+    if (expired) {
       await supabase
         .from('session')
         .delete()
@@ -73,24 +69,21 @@ export const validateSessionTokenInDb = async (sessionId) => {
       return { session: null, user: null };
     }
 
-    const renewSession = Date.now() >= new Date(session.expires_at).getTime() - DAY_IN_MS * 15;
-    if (renewSession) {
-      const updatedExpiresAt = new Date(Date.now() + DAY_IN_MS * 30);
+    const renew = Date.now() >= new Date(session.expires_at).getTime() - DAY_IN_MS * 15;
+    if (renew) {
+      const newExp = new Date(Date.now() + DAY_IN_MS * 30);
       await supabase
         .from('session')
-        .update({ expires_at: updatedExpiresAt })
+        .update({ expires_at: newExp })
         .eq('id', sessionId);
     }
-
     const { data: user, error: userError } = await supabase
       .from('user')
       .select('*')
       .eq('id', session.user_id)
       .single();
 
-    if (userError) {
-      return { session: null, user: null };
-    }
+    if (userError) return { session: null, user: null };
 
     return { session, user };
   } catch (error) {
@@ -106,12 +99,8 @@ export const getUserByLoginID = async (loginID) => {
       .eq('login_id', loginID)
       .single();
 
-    if (error || !data) {
-      throw new Error('Account doesn\'t exist');
-    }
+    if (error || !data) throw new Error('Account doesn\'t exist');
 
     return data;
-  } catch (error) {
-    throw new Error(error.message);
-  }
+  } catch (error) { throw new Error(error.message); }
 };

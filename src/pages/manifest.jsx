@@ -13,7 +13,7 @@ import { processSheet } from "../utils/excelReader";
 import CardManifest from "../ui/cardManifest";
 
 const Manifest = () => {
-  const { getSettings } = useAuth()  
+  const { can, getRestrictions, getSettings } = useAuth()
   const [editedData, setEditedData] = useState({});
   const [manifestData, setManifestData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -21,7 +21,7 @@ const Manifest = () => {
   const { showModal } = useModal();
 
   const { setLoading } = useLoading();
-  
+
   const settings = getSettings()?.columns?.values ?? [];
   const status = getSettings()?.delivery_status?.values ?? [];
   
@@ -66,21 +66,23 @@ const Manifest = () => {
 
   const { getRootProps, getInputProps, isDragActive } =
     useDropzoneExcel(setLoading, handleFileDrop)
-    
+
   const handleChange = (e) => {
     const search = e.target.value;
     setSearchTerm(search);
   };
 
   const handleSearch = async () => {
-    
-    const result = await searchDeliveries(searchTerm.trim());
+
+    const restrictions = getRestrictions();
+
+    const result = await searchDeliveries(searchTerm.trim(), restrictions);
     if (!result.searchFound) {
-      toast.error("No result.");
+      toast.error("Not found");
     }
     setManifestData(result.searchResult);
-    
-    if (result.searchResult.length > 0) {      
+
+    if (result.searchResult.length > 0) {
       setActiveTab(`${result.searchResult[0].shipments.shipment_number} - ${result.searchResult[0].tracking_number.split("/")[0]}`);
     }
   };
@@ -108,7 +110,7 @@ const Manifest = () => {
         [field]: value,
       },
     }));
-            
+
     // Also update UI immediately for better UX
     setManifestData((prev) =>
       prev.map((item) =>
@@ -120,10 +122,10 @@ const Manifest = () => {
   // GENERATE DRS
   // INTEGRATE TABLE DRIVEN
   // ADD SETTINGS PAGE
-  
+
   const handleSubmit = async () => {
     const updates = Object.entries(editedData);
-  
+
     if (updates.length === 0) {
       toast("No changes to save.");
       return;
@@ -134,7 +136,7 @@ const Manifest = () => {
       for (const [deliveryId, fields] of updates) {
         const response = await updateDelivery(deliveryId, fields);
         console.log(response);
-        
+
         if (response.error) {
           throw response.error
         }
@@ -178,61 +180,64 @@ const Manifest = () => {
         {/* Main Content */}
         {manifestData.length > 0 ? (
           <div className="w-full space-y-6">
-          {/* Tabs */}
-          <div className="flex space-x-2 mb-4 overflow-x-auto">
-            {shipmentTabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={clsx(
-                  "px-4 py-2 rounded-lg text-sm font-semibold border transition duration-300 cursor-pointer",
-                  activeTab === tab
-                    ? "bg-red-800 text-white"
-                    : "bg-white text-black font-semibold border-gray-300 hover:bg-gray-100"
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-    
-          {/* Deliveries */}
-          <CardManifest
-            settings={settings} 
-            deliveries={filteredManifest}
-            handleFieldChange={handleFieldChange}
-            handleSubmit={handleSubmit}
-            status={status}
-          />
+            {/* Tabs */}
+            <div className="flex space-x-2 mb-4 overflow-x-auto">
+              {shipmentTabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={clsx(
+                    "px-4 py-2 rounded-lg text-sm font-semibold border transition duration-300 cursor-pointer",
+                    activeTab === tab
+                      ? "bg-red-800 text-white"
+                      : "bg-white text-black font-semibold border-gray-300 hover:bg-gray-100"
+                  )}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-        </div>
-        ) : (
-          <div
-            {...getRootProps()}
-            className={clsx(
-              "rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer w-full h-full border-2",
-              isDragActive
-                ? "border-dashed border-blue-500 bg-blue-100"
-                : "border-gray-300"
-            )}
-          >
-            <input {...getInputProps()} />
-            {isDragActive && (
-              <UploadCloud className="h-12 w-12 text-gray-500" />
-            )}
-            <p className="text-gray-600 mt-2 text-center">
-              Search a barcode, name, or tracking number to display the record
-              here.
-            </p>
-            <p className="text-gray-400 mt-2 text-center">
-              Note: Drag & Drop or Click here to upload the manifest Excel to
-              the database
-            </p>
+            {/* Deliveries */}
+            <CardManifest
+              settings={settings}
+              deliveries={filteredManifest}
+              handleFieldChange={can("edit") ? handleFieldChange : undefined}
+              handleSubmit={can("edit") ? handleSubmit : undefined}
+              status={status}
+              canEdit={can("edit")}
+            />
+
           </div>
+        ) : (
+          can("create") && (
+            <div
+              {...getRootProps()}
+              className={clsx(
+                "rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer w-full h-full border-2",
+                isDragActive
+                  ? "border-dashed border-blue-500 bg-blue-100"
+                  : "border-gray-300"
+              )}
+            >
+              <input {...getInputProps()} />
+              {isDragActive && (
+                <UploadCloud className="h-12 w-12 text-gray-500" />
+              )}
+              <p className="text-gray-600 mt-2 text-center">
+                Search a barcode, name, or tracking number to display the record
+                here.
+              </p>
+              <p className="text-gray-400 mt-2 text-center">
+                Note: Drag & Drop or Click here to upload the manifest Excel to
+                the database
+              </p>
+            </div>
+          )
         )}
-      </div>     
+      </div>
     </div>
-    
+
   );
 };
 

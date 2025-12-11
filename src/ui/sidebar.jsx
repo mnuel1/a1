@@ -40,11 +40,13 @@ const Sidebar = () => {
   const navLinks = [
     { name: "Manifest", href: "/a1/manifest", icon: FileSpreadsheet },
     { name: "Database", href: "/a1/database", icon: Table },
-    { name: "Report", href: "/a1/report", icon: LayoutDashboard },
-    ...(role?.toLowerCase() === "admin"
-      ? [{ name: "Staffs", href: "/a1/staffs", icon: UsersRound }]
+    ...(role?.toLowerCase() === "admin" 
+      ? { name: "Report", href: "/a1/report", icon: LayoutDashboard }
       : []),
-    { name: "Profile", href: "/a1/profile", icon: User },
+    ...(role?.toLowerCase() === "admin"
+      ? [{ name: "Staffs", href: "/a1/users", icon: UsersRound }]
+      : []),
+    { name: "Profile", href: "/a1/account", icon: User },
   ];
 
   const handleLogout = () => {

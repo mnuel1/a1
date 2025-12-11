@@ -3,19 +3,25 @@ import { useNavigate } from "react-router-dom";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { getSettings } from "../api/settings";
+import { getAccountData } from "../api/account";
+
 import Sidebar from "../ui/sidebar";
 export const Layout = () => {
-  const { user, getUser, updateSettings } = useAuth();  
-  const navigate = useNavigate();
+  const { updateSettings, getUser, updateUser } = useAuth();  
   
   useEffect(() => {
-    if (!getUser()) {
-      navigate("/login");
-    }
-  }, [user]);
-
-  useEffect(() => {
     let unsubscribe;
+    let unsubscribeUser;
+
+    const user = getUser();
+
+    if (user?.id) {
+      getAccountData(user.id, (updatedUser) => {
+        updateUser(updatedUser);
+      }).then((res) => {
+        if (res?.unsubscribe) unsubscribeUser = res.unsubscribe;
+      });
+    }
 
     getSettings((newSettings) => {      
       // realtime
@@ -28,9 +34,9 @@ export const Layout = () => {
 
     return () => {
       if (unsubscribe) unsubscribe();
+      if (unsubscribeUser) unsubscribeUser();
     };
   }, []);
-
 
   return (
     <div className="bg-background dark:bg-background-dark 
