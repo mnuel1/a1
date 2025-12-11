@@ -22,8 +22,8 @@ const Manifest = () => {
 
   const { setLoading } = useLoading();
   
-  const settings = getSettings().columns.values ?? []
-  const status = getSettings().delivery_status.values ?? []
+  const settings = getSettings()?.columns?.values ?? [];
+  const status = getSettings()?.delivery_status?.values ?? [];
   
   const handleFileDrop = (file, sheetNames) => {
     let selectedSheet = null;
