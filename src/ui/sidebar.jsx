@@ -15,20 +15,20 @@ const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentPath, setCurrentPath] = useState("");
   const [role, setRole] = useState(null)
-  const { getUser, logout } = useAuth();  
+  const { getUser, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-    
+
   useEffect(() => {
     const user = getUser?.();
-    
-    if (!user || !user.role) {      
+
+    if (!user || !user.role) {
       setRole(null);
-    } else {      
+    } else {
       setRole(user.role);
     }
   }, [getUser]);
-  
+
   useEffect(() => {
     setCurrentPath(location.pathname);
   }, [location]);
@@ -40,14 +40,18 @@ const Sidebar = () => {
   const navLinks = [
     { name: "Manifest", href: "/a1/manifest", icon: FileSpreadsheet },
     { name: "Database", href: "/a1/database", icon: Table },
-    ...(role?.toLowerCase() === "admin" 
-      ? { name: "Report", href: "/a1/report", icon: LayoutDashboard }
+
+    ...(role?.toLowerCase() === "admin"
+      ? [{ name: "Report", href: "/a1/report", icon: LayoutDashboard }]
       : []),
+
     ...(role?.toLowerCase() === "admin"
       ? [{ name: "Staffs", href: "/a1/users", icon: UsersRound }]
       : []),
+
     { name: "Profile", href: "/a1/account", icon: User },
   ];
+
 
   const handleLogout = () => {
 
@@ -61,8 +65,7 @@ const Sidebar = () => {
       <aside
         className={`fixed top-0 left-0 h-full z-20 rounded-lg border 
           border-gray-200 bg-white p-2 shadow-xl transition-all duration-300 
-          dark:border-gray-700 dark:bg-gray-900 flex flex-col ${
-            !isExpanded ? "!w-[60px]" : "!w-[250px]"
+          dark:border-gray-700 dark:bg-gray-900 flex flex-col ${!isExpanded ? "!w-[60px]" : "!w-[250px]"
           }`}
       >
         <div
@@ -88,9 +91,8 @@ const Sidebar = () => {
               <a
                 key={link.name}
                 href={link.href}
-                className={`hover:bg-primary hover:text-font-dark flex items-center gap-3 rounded-lg p-3 transition-all duration-300 ${
-                  currentPath === link.href ? "bg-primary text-font-dark" : ""
-                } ${!isExpanded ? "justify-center" : ""}`}
+                className={`hover:bg-primary hover:text-font-dark flex items-center gap-3 rounded-lg p-3 transition-all duration-300 ${currentPath === link.href ? "bg-primary text-font-dark" : ""
+                  } ${!isExpanded ? "justify-center" : ""}`}
               >
                 <link.icon size={20} />
                 {isExpanded && (
@@ -103,13 +105,12 @@ const Sidebar = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <hr className="border-gray-500 border"/>
+            <hr className="border-gray-500 border" />
             <button
               type="button"
               onClick={handleLogout}
-              className={`hover:bg-primary hover:text-font-dark flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 transition-all duration-300 ${
-                !isExpanded ? "justify-center" : ""
-              }`}
+              className={`hover:bg-primary hover:text-font-dark flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 transition-all duration-300 ${!isExpanded ? "justify-center" : ""
+                }`}
             >
               <LogOut size={20} />
               {isExpanded && (
