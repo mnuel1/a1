@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/useAuth";
 import { useLoading } from "../context/useLoading";
+import { useStatusShipment } from "../context/useStatusShipment";
 import { updateDelivery } from "../api/manifest";
 
 import toast from "react-hot-toast";
@@ -21,43 +22,33 @@ import CardManifest from "./cardManifest";
 
 const ManifestTable = ({ isFull }) => {
   const { can, getRestrictions, getSettings } = useAuth()
+  const {
+    shipmentNumber,
+    shipmentNumbers,
+    setShipmentNumber,
+    statusOptions,
+    selectedStatus,
+    setSelectedStatus,
+  } = useStatusShipment();
+  const { setLoading } = useLoading();
   const [editedData, setEditedData] = useState({});
   const [filterText, setFilterText] = useState("");
-  const [shipmentNumber, setShipmentNumber] = useState(null);
-  const [shipmentNumbers, setShipmentNumbers] = useState([]);
-  const [selectedStatus, setSelectedStatus] = useState("");
+  
   const [deliveries, setDeliveries] = useState([]);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [modalMode, setModalMode] = useState("view"); // 'view' or 'edit'
 
   const rowLimit = 300
-  const { setLoading } = useLoading();
-
+  
   const columns = buildColumns(getSettings().columns.values ?? [], (row, action) => {
     setSelectedDelivery(row);
     setModalMode(action); // 'view' or 'edit'
   }, can('edit'));
 
-
-  const status = getSettings().delivery_status.values ?? []
-
-  useEffect(() => {
-    const fetchManifests = async () => {
-      const shipmentNo = await getRecentManifest();
-
-      if (shipmentNo.length > 0) {
-        setShipmentNumber(shipmentNo[0].shipment_number);
-        setShipmentNumbers(shipmentNo);
-      }
-    };
-
-    fetchManifests();
-  }, []);
-
   useEffect(() => {
     const restrictions = getRestrictions();
     setLoading(true)
-
+    
     getDeliveries(
       {
         status: selectedStatus,
@@ -67,11 +58,20 @@ const ManifestTable = ({ isFull }) => {
       rowLimit,
       restrictions
     ).then(({ data }) => {
-      setDeliveries(data);
+      const response = data.filter((item) => {
+        const search = filterText.toLowerCase();
+        return (
+          item?.tracking_number?.toString().toLowerCase().includes(search) ||
+          item?.shipper_name?.toLowerCase().includes(search) ||
+          item?.consignee?.toLowerCase().includes(search) ||
+          item?.barcode_no?.toLowerCase().includes(search)
+        );
+      });
+      setDeliveries(response);
 
       setLoading(false)
     });
-  }, [selectedStatus, shipmentNumber]);
+  }, [selectedStatus, shipmentNumber, filterText]);
 
   const handleExport = async () => {
     if (!shipmentNumber) {
@@ -90,22 +90,12 @@ const ManifestTable = ({ isFull }) => {
     setLoading(false)
   };
 
-  const filteredItems = deliveries.filter((item) => {
-    const search = filterText.toLowerCase();
-    return (
-      item?.tracking_number?.toString().toLowerCase().includes(search) ||
-      item?.shipper_name?.toLowerCase().includes(search) ||
-      item?.consignee?.toLowerCase().includes(search) ||
-      item?.barcode_no?.toLowerCase().includes(search)
-    );
-  });
-
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex flex-col lg:flex-row justify-between w-full gap-2">
         <div className="flex items-center w-full gap-2 mb-4">
           <SearchBar label="Search" value={filterText} onChange={setFilterText} />
-          <Status label="Status" onChange={setSelectedStatus} options={status} />
+          <Status label="Status" onChange={setSelectedStatus} options={statusOptions} />
           <Shipments
             value={shipmentNumber}
             options={shipmentNumbers}
@@ -125,7 +115,7 @@ const ManifestTable = ({ isFull }) => {
       <div className="relative h-[700px] overflow-x-auto">
         <DataTable
           columns={columns}
-          data={filteredItems}
+          data={deliveries}
           pagination
           highlightOnHover
           sortIcon={<ChevronDown />}
@@ -168,7 +158,7 @@ const ManifestTable = ({ isFull }) => {
             <CardManifest
               settings={getSettings().columns.values ?? []}
               deliveries={[selectedDelivery]}
-              status={status}
+              status={statusOptions}
               isReadOnly={modalMode === "view"}
               canEdit={can("edit")}
               handleFieldChange={(id, key, value) => {

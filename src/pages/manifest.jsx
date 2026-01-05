@@ -80,6 +80,7 @@ const Manifest = () => {
     if (!result.searchFound) {
       toast.error("Not found");
     }
+
     setManifestData(result.searchResult);
 
     if (result.searchResult.length > 0) {
@@ -103,6 +104,36 @@ const Manifest = () => {
   );
 
   const handleFieldChange = (deliveryId, field, value) => {
+    const boxMatch = field.match(/^box_(\d+)_(barcode|status)$/);
+    if (boxMatch) {
+      const [_, boxId, boxField] = boxMatch;
+
+      setManifestData(prev =>
+        prev.map(item =>
+          item.delivery_id === deliveryId
+            ? {
+                ...item,
+                delivery_boxes: item.delivery_boxes.map(box =>
+                  box.box_id === Number(boxId)
+                    ? { ...box, [boxField]: value }
+                    : box
+                ),
+              }
+            : item
+        )
+      );
+
+      setEditedData(prev => ({
+        ...prev,
+        [deliveryId]: {
+          ...prev[deliveryId],
+          [field]: value,
+        },
+      }));
+      return;
+    }
+
+    // normal field
     setEditedData((prev) => ({
       ...prev,
       [deliveryId]: {
@@ -111,17 +142,15 @@ const Manifest = () => {
       },
     }));
 
-    // Also update UI immediately for better UX
     setManifestData((prev) =>
       prev.map((item) =>
         item.delivery_id === deliveryId ? { ...item, [field]: value } : item
       )
     );
   };
+
   // !! PENDING 
   // GENERATE DRS
-  // INTEGRATE TABLE DRIVEN
-  // ADD SETTINGS PAGE
 
   const handleSubmit = async () => {
     const updates = Object.entries(editedData);
@@ -197,7 +226,7 @@ const Manifest = () => {
                 </button>
               ))}
             </div>
-
+            
             {/* Deliveries */}
             <CardManifest
               settings={settings}
@@ -206,6 +235,7 @@ const Manifest = () => {
               handleSubmit={can("edit") ? handleSubmit : undefined}
               status={status}
               canEdit={can("edit")}
+              boxBreakdownShow = {true}
             />
 
           </div>

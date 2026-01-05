@@ -11,6 +11,7 @@ import Database from "./pages/database";
 import Report from "./pages/report";
 import Staffs from "./pages/users";
 import Account from "./pages/account"
+import Settings from "./pages/settings";
 import NotFound from "./pages/notfound";
 import NoPermissionPage from "./pages/nopermission";
 
@@ -22,7 +23,7 @@ function AppRouter() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<AuthLayout />} >
-          <Route index element={<Login />} />
+          <Route index element={<Login />} />t
         </Route>
 
         <Route path="/a1" element={<Layout />} >
@@ -54,6 +55,11 @@ function AppRouter() {
           <Route path="account" element={
             <ProtectedRoute page="account" action="view">
               <Account />
+            </ProtectedRoute>
+          } />
+          <Route path="settings" element={
+            <ProtectedRoute page="settings" action="view">
+              <Settings />
             </ProtectedRoute>
           } />
           <Route path="no-permission" element={<NoPermissionPage />} />

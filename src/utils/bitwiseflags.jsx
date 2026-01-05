@@ -1,0 +1,9 @@
+export const DISPLAYFLAG = {
+  HIDDEN: 1,
+  READONLY: 2,
+  REQUIRED: 4,
+  TABLE: 8,
+  PRINTABLE: 16,
+  SCANNABLE: 32,
+  CARD: 64
+};

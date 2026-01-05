@@ -197,6 +197,11 @@ export const searchDeliveries = async (query, restrictions = {}) => {
         shipments (
           shipment_number,
           container_number
+        ),
+        delivery_boxes (
+          box_id,
+          barcode,
+          status
         )
       `
       )
@@ -218,7 +223,6 @@ export const searchDeliveries = async (query, restrictions = {}) => {
         queryBuilder = queryBuilder.ilike("city", `%${normalized}%`);
       });
     }
-
 
     const { data: initial, error: initialError } = await queryBuilder.limit(50);
 

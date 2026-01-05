@@ -7,7 +7,7 @@ import { useAuth } from "../context/useAuth";
 
 import { loginWithCredentials } from "../api/auth";
 
-import LoginInput from "../ui/input";
+import { NormalInput } from "../ui/input";
 
 const Login = () => {
   const [loginID, setLoginID] = useState("");
@@ -48,7 +48,7 @@ const Login = () => {
         </h2>
 
         <form onSubmit={onSubmit} className="space-y-4 mt-6">
-          <LoginInput
+          <NormalInput
             type="text"
             label="Login ID"
             name="loginID"
@@ -57,7 +57,7 @@ const Login = () => {
             value={loginID}
             onChange={(e) => setLoginID(e.target.value)}
           />
-          <LoginInput
+          <NormalInput
             type="password"
             name="password"
             label="Password"

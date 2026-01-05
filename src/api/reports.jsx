@@ -1,47 +1,75 @@
 import { supabase } from "../supabaseClient";
 
+/**
+ * Get analytics per shipment
+ * Returns:
+ *  - destinations: total boxes + breakdown by status + cities/regions
+ *  - regions: total boxes per region
+ */
 export const getAnalytics = async (shipmentNumber) => {
   try {
+    // fetch deliveries with shipment join
     const { data, error } = await supabase
       .from("deliveries")
-      .select("region, destination, qty")
-      .eq("shipment_id", 22);
+      .select(`
+        city,
+        destination,
+        qty,
+        status,
+        shipments!inner(shipment_number)
+      `)
+      .eq("shipments.shipment_number", shipmentNumber);
 
     if (error) throw error;
 
-    const groupedDestinations = data.reduce((acc, curr) => {
-      const dest = curr.destination;
-      const qty = parseInt(curr.qty) || 0;
-      acc[dest] = (acc[dest] || 0) + qty;
-      return acc;
-    }, {});
+    const normalizeCity = (city) =>
+      city ? city.replace(/city/i, "").trim() : "UNKNOWN";
+    const destinationsMap = {};
 
-    const destinations = Object.entries(groupedDestinations).map(
-      ([destination, totalQty]) => ({
-        destination,
-        totalQty,
-      })
-    );
-    
-    const groupedRegions = data.reduce((acc, curr) => {
-      const region = curr.region;
-      const qty = parseInt(curr.qty) || 0;
-      if (!region) return acc;
-      acc[region] = (acc[region] || 0) + qty;
-      return acc;
-    }, {});
+    data.forEach((d) => {
+      const dest = d.destination.trim() || "UNKNOWN";
+      const status = d.status.trim() || "NONE";
 
-    const regions = Object.entries(groupedRegions).map(
-      ([region, value]) => ({
-        group: region,
-        value,
-      })
-    );
-    
-    return {
-      destinations,
-      regions,
-    };
+      if (!destinationsMap[dest]) {
+        destinationsMap[dest] = {
+          destination: dest,
+          totalQty: 0,
+          statusBreakdown: {}, // boxes per status
+          cities: {}, // boxes per city
+        };
+      }
+
+      // total qty
+      destinationsMap[dest].totalQty += parseInt(d.qty) || 0;
+
+      // per status
+      destinationsMap[dest].statusBreakdown[status] =
+        (destinationsMap[dest].statusBreakdown[status] || 0) +
+        (parseInt(d.qty) || 0);
+
+    });
+
+    const destinations = Object.values(destinationsMap);
+
+    const citiesMap = {};
+    data.forEach((d) => {
+      const city = normalizeCity(d.city);
+      citiesMap[city] = (citiesMap[city] || 0) + (parseInt(d.qty) || 0);
+    });
+
+    // Convert to array
+    let cities = Object.entries(citiesMap).map(([group, value]) => ({
+      group,
+      value,
+    }));
+
+    // Keep only top 6 by value
+    cities = cities
+      .sort((a, b) => b.value - a.value) // descending
+      .slice(0, 6);
+
+
+    return { destinations, cities };
   } catch (error) {
     throw new Error(error.message);
   }

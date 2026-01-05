@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 
-export const LabeledField = ({ label, children }) => {
+export const LabeledField = ({ label, children, show }) => {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-bold">{label}</label>
+      { show && <label className="text-xs font-bold"> {label} </label> }
       {children}
     </div>
   );
@@ -16,19 +16,7 @@ export const Status = ({
   options = [], 
   onChange }) => {
   
-  const defaultOptions = [
-    "OUT FOR DELIVERY",
-    "DELIVERED",
-    "BACKLOAD",
-    "PRIORITY",
-    "NEGATIVE / FOR DOUBLE CHECKING",
-    "HOLD",
-    "DISPATCH-PROVINCE",
-    "N/A",
-    "ALL"
-  ];
-
-  const finalOptions = options.length ? options : defaultOptions;
+  const finalOptions = options
   const [selectedValue, setSelectedValue] = useState(value || "ALL");
 
   useEffect(() => {
@@ -36,13 +24,13 @@ export const Status = ({
   }, [value]);
 
   const handleChange = (e) => {
-    const newValue = e.target.value;
+    let newValue = e.target.value;
     setSelectedValue(newValue);
     if (onChange) onChange(newValue);
   };
 
   return (
-    <LabeledField label={label}>
+    <LabeledField label={label} show={label.trim() !== ""}>
       <select
         className="text-md w-full rounded-lg border px-2 py-1 focus:ring-red-300 focus:outline-none cursor-pointer"
         value={selectedValue}
@@ -62,7 +50,9 @@ export const Shipments = ({
   label = "", 
   value = "", 
   options = [], 
-  onChange }) => {
+  onChange, 
+  
+}) => {
 
   const finalOptions = options.length ? options : ["None"];
   const [selectedValue, setSelectedValue] = useState(value || "N/A");
@@ -83,7 +73,7 @@ export const Shipments = ({
 
   return (
     <div className="flex gap-4">
-      <LabeledField label={label}>
+      <LabeledField label={label} show={label}>
         <select
           className="text-md w-full rounded-lg border px-2 py-1 focus:ring-red-300 focus:outline-none cursor-pointer"
           value={selectedValue}
@@ -97,7 +87,7 @@ export const Shipments = ({
         </select>
       </LabeledField>
 
-      <LabeledField label="Container No.">
+      <LabeledField label="Container No." show={label.trim() !== ""}>
         <input
           type="text"
           className="text-md w-full px-2 py-1 focus:ring-red-300 focus:outline-none cursor-normal"
@@ -124,7 +114,7 @@ export const SearchBar = ({ label = "Search", value = "", placeholder = "Search.
   };
 
   return (
-    <LabeledField label={label}>
+    <LabeledField label={label} show={label.trim() !== ""}>
       <input
         type="text"
         placeholder={placeholder}

@@ -5,13 +5,12 @@ const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
 export const loginWithCredentials = async (login, loginID, password) => {
   try {
-    const { data, error } = await supaClient.select(
-      "user",
-      "id, name, password, role, access, status, login_id",
-      { login_id: loginID },
-      true
-    );
-
+    const { data, error } = await supabase
+      .from('user')
+      .select('id', 'name', 'password', 'role', 'access', 'status', 'login_id')
+      .eq('login_id', loginID)
+      .single();
+    
     if (error || !data) {
       throw new Error("Account doesn't exist");
     }

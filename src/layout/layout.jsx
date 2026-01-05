@@ -45,6 +45,9 @@ export const Layout = () => {
       <div className="flex px-4 gap-4 w-full">
         <Sidebar />
         <div className="min-h-screen bg-white rounded-md w-full ml-9 ">
+          <div className="sticky top-0 z-20 bg-primary text-white w-full px-4">
+            You are {getUser().name} as the {getUser().role}
+          </div>
           <Outlet />
         </div>
       </div>

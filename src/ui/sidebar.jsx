@@ -6,7 +6,8 @@ import {
   LogOut,
   FileSpreadsheet,
   UsersRound,
-  Table
+  Table,
+  Settings
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
@@ -21,7 +22,6 @@ const Sidebar = () => {
 
   useEffect(() => {
     const user = getUser?.();
-
     if (!user || !user.role) {
       setRole(null);
     } else {
@@ -50,11 +50,14 @@ const Sidebar = () => {
       : []),
 
     { name: "Profile", href: "/a1/account", icon: User },
+
+    ...(role?.toLowerCase() === "admin"
+      ? [{ name: "Settings", href: "/a1/settings", icon: Settings }]
+      : []),
   ];
 
 
   const handleLogout = () => {
-
     logout()
     navigate("/")
   }
@@ -84,7 +87,7 @@ const Sidebar = () => {
             <Menu size={20} />
           </button>
         </div>
-
+        
         <nav className="flex flex-col justify-between gap-2 h-full">
           <div className="flex flex-col gap-2">
             {navLinks.map((link) => (

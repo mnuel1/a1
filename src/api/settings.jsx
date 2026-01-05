@@ -1,14 +1,5 @@
 import { supabase } from '../supabaseClient';
-
-export const DISPLAYFLAG = {
-  HIDDEN:  1,
-  READONLY: 2,
-  REQUIRED: 4,
-  TABLE: 8,
-  PRINTABLE: 16,
-  SCANNABLE: 32,
-  CARD: 64
-};
+import { DISPLAYFLAG } from '../utils/bitwiseflags';
 
 export const hasDisplayFlag = (display, flag) => (display & flag) === flag;
 
@@ -73,3 +64,15 @@ export const getSettings = async (onChange) => {
     return null;
   }
 };
+
+
+export const getAccessPresets = async () => {
+  try {
+    const { data, error } = await supabase.from("access_level_presets").select("*");
+
+    return { data, error }
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
+}

@@ -1,12 +1,10 @@
-import React from 'react';
-
-const LoginInput = ({
+export const NormalInput = ({
   type = 'text',
   name = '',
   label = '',
   value = '',
   placeholder = '',
-  required = false,  
+  required = false,
   canAutoComplete = false,
   onChange
 }) => {
@@ -28,4 +26,67 @@ const LoginInput = ({
   );
 };
 
-export default LoginInput;
+
+export const CardInput = ({
+  type = "text",
+  keyName,
+  label,
+  value,
+  values,
+  parentid,
+  editable,
+  handleFieldChange,
+}) => {
+  if (type === "label") {
+    return (
+      <div key={keyName} className="flex gap-2">
+        <strong>{label}</strong>
+        <span className="underline">{value}</span>
+      </div>
+    );
+  }
+
+  if (type === "text" || type === "date") {
+    return (
+      <label key={keyName} className="block mb-1">
+        <strong>{label}:</strong>
+        <input
+          type={type === "date" ? "date" : "text"}
+          className="border px-2 py-1 rounded w-full"
+          value={value || ""}
+          onChange={(e) =>
+            editable &&
+            handleFieldChange(parentid, keyName, e.target.value)
+          }
+          disabled={!editable}
+        />
+      </label>
+    );
+  }
+
+  if (type === "dropdown") {
+    return (
+      <label key={keyName} className="block mb-1">
+        <strong>{label}:</strong>
+        <select
+          className="border px-2 py-1 rounded w-full"
+          value={value || ""}
+          onChange={(e) =>
+            editable &&
+            handleFieldChange(parentid, keyName, e.target.value)
+          }
+          disabled={!editable}
+        >
+          <option value="">Select {label}</option>
+          {values?.split("|").map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  return null; // fallback if type is unknown
+};

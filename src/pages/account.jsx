@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import Input from '../ui/input';
+import { NormalInput } from '../ui/input';
 
 import { useAuth } from '../context/useAuth';
 import { useLoading } from "../context/useLoading";
@@ -80,7 +80,7 @@ const Account = () => {
         </div>
 
         <form onSubmit={handleSubmitLogin} className="mt-4 space-y-4 w-fit">          
-          <Input
+          <NormalInput
             label="Login ID"
             type="text"
             name="loginID"
@@ -109,7 +109,7 @@ const Account = () => {
         </div>
 
         <form onSubmit={handleSubmitPassword} className="mt-4 space-y-4 w-fit">          
-          <Input
+          <NormalInput
             label="New Password"
             type="password"
             name="password"
@@ -119,7 +119,7 @@ const Account = () => {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <Input
+          <NormalInput
             label="Confirm Password"
             type="password"
             name="confirmPassword"

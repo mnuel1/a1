@@ -17,7 +17,9 @@ export const ModalProvider = ({ children }) => {
     <ModalContext.Provider value={{ showModal, hideModal }}>
       {children}
       {modal?.isOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-900/50 z-50">
+        <div 
+          className="fixed inset-0 flex items-center justify-center bg-gray-900/50 z-50"
+          >
           <div className="bg-white rounded-xl p-6 shadow-lg w-[400px] max-w-full">
             {/* Header */}
             {modal.title && (
