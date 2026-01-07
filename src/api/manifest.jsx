@@ -135,7 +135,14 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restri
   try {
     let query = supabase
       .from("deliveries")
-      .select("*, shipments!inner(*)", { count: "exact" })
+      .select(`
+        *, 
+        shipments!inner(*),
+        delivery_boxes (
+          box_id,
+          barcode,
+          status
+        )`, { count: "exact" })
       .range((page - 1) * rowLimit, page * rowLimit - 1);
 
     if (filters.shipment_number) {
@@ -327,6 +334,31 @@ export const createDelivery = async (formData) => {
 
 export const updateDelivery = async (deliveryId, updatedFields) => {
   try {
+    if (deliveryId === "delivery_boxes") {
+      for (const updatedBox of updatedFields) {
+        const { box_id, barcode, status } = updatedBox;
+        
+        const updatePayload = { box_id };
+        if (barcode !== undefined && barcode !== null) updatePayload.barcode = barcode;
+        if (status !== undefined && status !== null) updatePayload.status = status;
+
+        const { data: boxData, error: boxError } = await supaClient.update(
+          "delivery_boxes",
+          {box_id: box_id},
+          updatePayload,
+          "*"
+        )
+
+        if (boxError) {
+          console.error("Error updating box:", boxError);
+        } else {
+          console.log("Updated box:", boxData);
+        }
+      }
+      return { success: true, message: `${deliveryId} updated successfully` };
+    }
+
+    
     const { data, error } = await supaClient.update(
       "deliveries",
       { delivery_id: deliveryId },

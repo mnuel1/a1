@@ -10,7 +10,7 @@ const CardManifest = ({
   status,
   canEdit = false,
   isReadOnly = false,
-  boxBreakdownShow = false,
+  boxBreakdownShow = true,
 }) => {
   const CARD_FLAG = DISPLAYFLAG.CARD;
   const editable = canEdit && !isReadOnly;

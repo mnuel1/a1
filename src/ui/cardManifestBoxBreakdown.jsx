@@ -21,7 +21,7 @@ const BoxBreakdown = ({
       </div>
 
       {/* HEADER */}
-      <div className="grid grid-cols-[20px_1fr_1fr] gap-2 text-xs font-semibold mb-2">
+      <div className="grid grid-cols-[20px_1fr_160px] gap-2 text-xs font-semibold mb-2">
         <span></span>
         <strong>Barcode No.</strong>
         <strong>Status</strong>
@@ -32,7 +32,7 @@ const BoxBreakdown = ({
         {boxes.map((box, index) => (
           <div
             key={box.box_id}
-            className="grid grid-cols-[20px_1fr_1fr] gap-2 items-center"
+            className="grid grid-cols-[20px_1fr_160px] gap-2 items-center"
           >
             <span className="text-xs">{index + 1}</span>
 

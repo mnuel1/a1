@@ -10,6 +10,8 @@ import { searchDeliveries, updateDelivery } from "../api/manifest";
 import { useAuth } from "../context/useAuth";
 import { processSheet } from "../utils/excelReader";
 
+import { submitManifestEdits, applyFieldChange } from "../utils/helper";
+
 import CardManifest from "../ui/cardManifest";
 
 const Manifest = () => {
@@ -27,6 +29,8 @@ const Manifest = () => {
   
   const handleFileDrop = (file, sheetNames) => {
     let selectedSheet = null;
+    toast.error("currently disabled sorry. (fix on going");
+    return
 
     showModal({
       title: "Select a Sheet",
@@ -76,6 +80,9 @@ const Manifest = () => {
 
     const restrictions = getRestrictions();
 
+    setEditedData({});
+    setActiveTab(null);
+
     const result = await searchDeliveries(searchTerm.trim(), restrictions);
     if (!result.searchFound) {
       toast.error("Not found");
@@ -104,81 +111,25 @@ const Manifest = () => {
   );
 
   const handleFieldChange = (deliveryId, field, value) => {
-    const boxMatch = field.match(/^box_(\d+)_(barcode|status)$/);
-    if (boxMatch) {
-      const [_, boxId, boxField] = boxMatch;
-
-      setManifestData(prev =>
-        prev.map(item =>
-          item.delivery_id === deliveryId
-            ? {
-                ...item,
-                delivery_boxes: item.delivery_boxes.map(box =>
-                  box.box_id === Number(boxId)
-                    ? { ...box, [boxField]: value }
-                    : box
-                ),
-              }
-            : item
-        )
-      );
-
-      setEditedData(prev => ({
-        ...prev,
-        [deliveryId]: {
-          ...prev[deliveryId],
-          [field]: value,
-        },
-      }));
-      return;
-    }
-
-    // normal field
-    setEditedData((prev) => ({
-      ...prev,
-      [deliveryId]: {
-        ...prev[deliveryId],
-        [field]: value,
-      },
-    }));
-
-    setManifestData((prev) =>
-      prev.map((item) =>
-        item.delivery_id === deliveryId ? { ...item, [field]: value } : item
-      )
-    );
+    applyFieldChange({
+      deliveryId,
+      field,
+      value,
+      setManifestData,
+      setEditedData,
+    });
   };
-
-  // !! PENDING 
-  // GENERATE DRS
 
   const handleSubmit = async () => {
-    const updates = Object.entries(editedData);
-
-    if (updates.length === 0) {
-      toast("No changes to save.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      for (const [deliveryId, fields] of updates) {
-        const response = await updateDelivery(deliveryId, fields);
-        console.log(response);
-
-        if (response.error) {
-          throw response.error
-        }
-      }
-      toast.success(`Saved successfully.`);
-      setEditedData({});
-    } catch (err) {
-      console.error(err);
-      toast.error(`Update failed.`);
-    } finally {
-      setLoading(false);
-    }
+    await submitManifestEdits({
+      editedData,
+      updateDelivery,
+      setLoading,
+      toast,
+      onSuccess: () => setEditedData({}),
+    });
   };
+
 
   return (
     <div className="flex h-full w-full bg-gray-50">
@@ -214,7 +165,10 @@ const Manifest = () => {
               {shipmentTabs.map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => {
+                    setEditedData({});
+                    setActiveTab(tab);
+                  }}
                   className={clsx(
                     "px-4 py-2 rounded-lg text-sm font-semibold border transition duration-300 cursor-pointer",
                     activeTab === tab
