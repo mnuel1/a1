@@ -5,7 +5,7 @@ import { useStatusShipment } from "../context/useStatusShipment";
 import { updateDelivery } from "../api/manifest";
 
 import toast from "react-hot-toast";
-import { ChevronDown, FileSpreadsheet } from "lucide-react";
+import { ChevronDown, ChevronRight, FileSpreadsheet } from "lucide-react";
 
 import DataTable from "react-data-table-component";
 
@@ -156,7 +156,7 @@ const ManifestTable = () => {
                 );
                 return editedBox ? { ...box, ...editedBox } : box;
               });
-            
+
               const newBoxes = edits.delivery_boxes.filter(
                 b => !mergedBoxes.some(mb => mb.box_id === b.box_id)
               );
@@ -172,95 +172,136 @@ const ManifestTable = () => {
         setSelectedDelivery(null);
       },
     });
-};
+  };
 
+  const ExpandedRow = ({ data }) => {
+    return (
+      <div className="p-4 bg-gray-50 border-t">
+        <div className="grid grid-cols-[20px_160px_160px] gap-2 text-xs font-semibold mb-2">
+          <span></span>
+          <span>Barcode No.</span>
+          <span>Status</span>
+        </div>
 
-return (
-  <div className="flex h-full w-full flex-col">
-    <div className="flex flex-col lg:flex-row justify-between w-full gap-2">
-      <div className="flex items-center w-full gap-2 mb-4">
-        <SearchBar label="Search" value={filterText} onChange={setFilterText} />
-        <Status label="Status" onChange={setSelectedStatus} options={statusOptions} />
-        <Shipments
-          value={shipmentNumber}
-          options={shipmentNumbers}
-          label="Shipment No."
-          onChange={setShipmentNumber}
-        />
-      </div>
-      <div className="flex items-center">
-        {can('export') && <button
-          className="flex gap-2 w-full bg-primary px-3 py-2 text-white rounded-lg whitespace-nowrap cursor-pointer hover:bg-primary-60"
-          onClick={handleExport}
-        >
-          <FileSpreadsheet /> Export to Excel
-        </button>}
-      </div>
-    </div>
-    <div className="relative h-[700px] overflow-x-auto">
-      <DataTable
-        columns={columns}
-        data={deliveries}
-        pagination
-        highlightOnHover
-        sortIcon={<ChevronDown />}
-        persistTableHead
-        customStyles={{
-          headCells: {
-            style: {
-              fontWeight: "600",
-              fontSize: "12px",
-              backgroundColor: "#f3f4f6",
-              textAlign: "center",
-              justifyContent: "center"
-            },
-          },
-          rows: {
-            style: {
-              fontSize: "13px",
-              minHeight: "48px",
-              alignItems: "center",
-            },
-          },
-          cells: {
-            style: {
-              justifyContent: "center",
-            },
-          },
-        }}
-      />
-    </div>
-    {selectedDelivery && (
-      <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/50">
-        <div className="bg-white p-6 rounded-lg max-w-8xl w-full max-h-[90vh] overflow-auto relative">
-          <button
-            className="absolute top-2 right-4 text-red-500 hover:text-red-700 px-2 py-1 rounded-full text-2xl font-bold cursor-pointer"
-            onClick={() => {
-              setSelectedDelivery(null);
-              setEditedData({});
-            }}
+        <div className="space-y-2">
+          {(data.delivery_boxes ?? []).map((box, index) => (
+            <div
+            key={box.box_id}
+            className="grid grid-cols-[20px_160px_160px] gap-2 items-center"
           >
-            ✕
-          </button>
-
-          <CardManifest
-            settings={getSettings().columns.values ?? []}
-            deliveries={[selectedDelivery]}
-            status={statusOptions}
-            isReadOnly={modalMode === "view"}
-            canEdit={can("edit")}
-            handleFieldChange={handleModalFieldChange}
-            handleSubmit={handleModalSubmit}
-          />
-
+            <span>{index + 1}.</span>
+            <p className="px-2 py-1">{box.barcode}</p>
+            <p className="px-2 py-1">{box.status}</p>
+          </div>
+          ))}
         </div>
       </div>
-    )}
+    );
+  };
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      <div className="flex flex-col lg:flex-row justify-between w-full gap-2">
+        <div className="flex items-center w-full gap-2 mb-4">
+          <SearchBar label="Search" value={filterText} onChange={setFilterText} />
+          <Status label="Status" onChange={setSelectedStatus} options={statusOptions} />
+          <Shipments
+            value={shipmentNumber}
+            options={shipmentNumbers}
+            label="Shipment No."
+            onChange={setShipmentNumber}
+          />
+        </div>
+        <div className="flex items-center">
+          {can('export') && <button
+            className="flex gap-2 w-full bg-primary px-3 py-2 text-white rounded-lg whitespace-nowrap cursor-pointer hover:bg-primary-60"
+            onClick={handleExport}
+          >
+            <FileSpreadsheet /> Export to Excel
+          </button>}
+        </div>
+      </div>
+      <div className="flex flex-col h-[700px]">
+        <div className="bg-yellow-400 w-full p-2 sticky top-0 z-20 rounded-md">
+          <div className="flex w-full items-center text-sm">
+            Click the
+            <p className="w-fit font-bold text-gray  -500">
+              <ChevronRight />
+            </p> 
+            to see the 
+            <strong className="mx-1"> barcodes </strong> and their <strong className="mx-1"> status </strong>.
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <DataTable
+            columns={columns}
+            data={deliveries}
+            pagination
+            paginationPerPage={200} // default rows per page
+            paginationRowsPerPageOptions={[10, 25, 50, 100, 200]} // options in the dropdown
+            highlightOnHover
+            sortIcon={<ChevronDown />}
+            persistTableHead
+            expandableRows
+            expandableRowsComponent={ExpandedRow} // if you want the row details
+            customStyles={{
+              headCells: {
+                style: {
+                  fontWeight: "600",
+                  fontSize: "12px",
+                  backgroundColor: "#f3f4f6",
+                  textAlign: "center",
+                  justifyContent: "center"
+                },
+              },
+              rows: {
+                style: {
+                  fontSize: "13px",
+                  minHeight: "48px",
+                  alignItems: "center",
+                },
+              },
+              cells: {
+                style: {
+                  justifyContent: "center",
+                },
+              },
+            }}
+          />
+        </div>
+      </div>
+      {selectedDelivery && (
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-6 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-auto relative">
+            <button
+              className="absolute top-2 right-4 text-red-500 hover:text-red-700 px-2 py-1 rounded-full text-2xl font-bold cursor-pointer"
+              onClick={() => {
+                setSelectedDelivery(null);
+                setEditedData({});
+              }}
+            >
+              ✕
+            </button>
+
+            <CardManifest
+              settings={getSettings().columns.values ?? []}
+              deliveries={[selectedDelivery]}
+              status={statusOptions}
+              isReadOnly={modalMode === "view"}
+              canEdit={can("edit")}
+              handleFieldChange={handleModalFieldChange}
+              handleSubmit={handleModalSubmit}
+            />
+
+          </div>
+        </div>
+      )}
 
 
-  </div>
+    </div>
 
-);
+  );
 };
 
 export default ManifestTable;

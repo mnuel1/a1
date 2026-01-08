@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { uploadManifest } from "../api/manifest";
+import { ALLOWED_DELIMITERS_REGEX, splitBarcodes } from "./helper";
 
 export const getSheetNames = (file) => {
   return new Promise((resolve, reject) => {
@@ -26,7 +27,7 @@ export const readSheet = (file, sheetName) => {
         const workbook = XLSX.read(data, { type: "array" });
 
         if (!workbook.SheetNames.includes(sheetName)) {
-          reject(new Error(`Sheet "${sheetName}" not found`));
+          reject(new Error(`Sheet "${sheetName}" not found in the uploaded excel file. Please check it first.`));
           return;
         }
 
@@ -41,10 +42,45 @@ export const readSheet = (file, sheetName) => {
   });
 };
 
+const buildDeliveryBoxes = (row, rowIndex) => {
+  const rawBarcodes = row["BARCODE NO."].trim();
+  const expectedQty = Number(row["NO. OF BOXES"]);
+
+  if (!rawBarcodes) {
+    throw new Error(
+      `Row ${rowIndex + 1}: BARCODE NO. is empty`
+    );
+  }
+
+  const isSingleBarcode = !/[;,\/]/.test(rawBarcodes);
+  const hasValidDelimiter = ALLOWED_DELIMITERS_REGEX.test(rawBarcodes);
+
+  if (!isSingleBarcode && !hasValidDelimiter) {
+    throw new Error(
+      `Row ${rowIndex + 1} (${row["TRACKING NO."]}): 
+      BARCODE NO. must be separated using comma (,), semicolon (;), or slash (/). 
+      Please use either of those characters when seperating barcodes.`
+    );
+  }
+  const barcodes = splitBarcodes(rawBarcodes);
+
+  if (barcodes.length !== expectedQty) {
+    throw new Error(
+      `(${barcodes.length}) barcodes detected but it is not match with the number of boxes (${expectedQty}). Please check and correct the manifest before uploading it again.`
+    );
+  }
+  const hasStatusColumn = "STATUS" in row;
+
+  return barcodes.map(barcode => ({
+    barcode,
+    ...(hasStatusColumn ? { status: row["STATUS"] ?? null } : {})
+  }));
+};
+
 export const processSheet = async (setLoading, file, selectedSheet) => {
   try {
     const excelData = await readSheet(file, selectedSheet);
-        
+
     if (!excelData || excelData.length === 0) {
       throw new Error("Excel sheet is empty.");
     }
@@ -74,18 +110,41 @@ export const processSheet = async (setLoading, file, selectedSheet) => {
     }
 
     if (shipmentNo && containerNo) {
-      const payload = { manifestData: manifestData, shipmentNo, containerNo, totalBoxes };
-      const result = await uploadManifest(payload);
+      const structuredManifest = [];
+      for (let index = 0; index < manifestData.length; index++) {
+        const row = manifestData[index];
+        try {
+          const delivery_boxes = buildDeliveryBoxes(row, index);
+          structuredManifest.push({ ...row, __delivery_boxes: delivery_boxes });
+        } catch (rowError) {
+          return {
+            data: { manifestData: [row] },
+            success: false,
+            message: rowError.message,
+          };
+        }
+      }
 
-      if (!result.success) throw new Error("Something went wrong.");
+        const payload = {
+          shipmentNo,
+          containerNo,
+          totalBoxes,
+          manifestData: structuredManifest,
+        };
 
-      return { data: payload, success: true, message: null}
-    } else {
-      throw new Error("Shipment number or container number not found.");
+        console.log(payload);
+
+        // const result = await uploadManifest(payload);
+
+        if (!result.success) throw new Error("Something went wrong.");
+
+        return { data: payload, success: true, message: null }
+      } else {
+        throw new Error("We detected that the sheet does not contain either a shipment number or a container number. Please double-check the manifest before uploading.");
+      }
+    } catch (err) {
+      return { data: null, success: false, message: err?.message }
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    return { data: null, success: false, message: err?.message}
-  } finally {
-    setLoading(false);
-  }
-};
+  };

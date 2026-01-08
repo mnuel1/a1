@@ -165,3 +165,13 @@ export const submitManifestEdits = async ({
     setLoading(false);
   }
 };
+
+export const ALLOWED_DELIMITERS_REGEX = /[,;/]/;
+
+export const splitBarcodes = (barcodeString) => {
+  return barcodeString
+    .split(/[,;/]/)
+    .map(b => b.trim())
+    .filter(Boolean);
+};
+

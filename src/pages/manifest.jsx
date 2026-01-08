@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, UploadCloud } from "lucide-react";
+import { UploadCloud } from "lucide-react";
 import clsx from "clsx";
 
 import toast from "react-hot-toast";
@@ -12,6 +12,7 @@ import { processSheet } from "../utils/excelReader";
 
 import { submitManifestEdits, applyFieldChange } from "../utils/helper";
 
+import { SearchBar } from "../ui/filters";
 import CardManifest from "../ui/cardManifest";
 
 const Manifest = () => {
@@ -26,11 +27,9 @@ const Manifest = () => {
 
   const settings = getSettings()?.columns?.values ?? [];
   const status = getSettings()?.delivery_status?.values ?? [];
-  
+
   const handleFileDrop = (file, sheetNames) => {
     let selectedSheet = null;
-    toast.error("currently disabled sorry. (fix on going");
-    return
 
     showModal({
       title: "Select a Sheet",
@@ -59,7 +58,20 @@ const Manifest = () => {
         const result = await processSheet(setLoading, file, selectedSheet);
 
         if (!result.success) {
-          toast.error(result.message)
+          const errorMessage = result.message || "Something went wrong while processing the sheet";
+          const errorRowData = result?.data?.manifestData;
+
+          if (errorRowData) {
+            showModal({
+              type: "table",
+              data: errorRowData,
+              content: errorMessage,
+              cancelText: "Close",
+            });
+          } else {
+            toast.error(result.message)
+          }
+
           return;
         }
 
@@ -71,13 +83,7 @@ const Manifest = () => {
   const { getRootProps, getInputProps, isDragActive } =
     useDropzoneExcel(setLoading, handleFileDrop)
 
-  const handleChange = (e) => {
-    const search = e.target.value;
-    setSearchTerm(search);
-  };
-
   const handleSearch = async () => {
-
     const restrictions = getRestrictions();
 
     setEditedData({});
@@ -137,31 +143,18 @@ const Manifest = () => {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-3xl font-bold text-gray-800">Manifest</h2>
         </div>
-        <div
-          className="focus-within:ring-primary mb-4 flex w-full items-center
-            space-x-1 rounded-lg border border-gray-300 px-2 py-1 focus-within:ring-2"
-        >
-          <Search className="text-gray-500 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Search a name, barcode, or tracking number here..."
-            value={searchTerm}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleSearch();
-              }
-            }}
-            onChange={handleChange}
-            className="ml-2 w-full focus:outline-none text-lg py-2"
-          />
-        </div>
+        <SearchBar
+          label=""
+          placeholder={'Search a name, barcode, or tracking number here...'}
+          value={searchTerm}
+          onChange={setSearchTerm}
+          handleOnKeyDown={handleSearch}
+        />
 
-        {/* Main Content */}
         {manifestData.length > 0 ? (
           <div className="w-full space-y-6">
             {/* Tabs */}
-            <div className="flex space-x-2 mb-4 overflow-x-auto">
+            <div className="flex space-x-2 mb-4 overflow-x-auto w-[90vw]">
               {shipmentTabs.map((tab) => (
                 <button
                   key={tab}
@@ -170,18 +163,17 @@ const Manifest = () => {
                     setActiveTab(tab);
                   }}
                   className={clsx(
-                    "px-4 py-2 rounded-lg text-sm font-semibold border transition duration-300 cursor-pointer",
+                    "flex-shrink-0 w-32 px-4 py-2 rounded-lg text-sm font-semibold border transition duration-300 cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap",
                     activeTab === tab
                       ? "bg-red-800 text-white"
-                      : "bg-white text-black font-semibold border-gray-300 hover:bg-gray-100"
+                      : "bg-white text-black border-gray-300 hover:bg-gray-100"
                   )}
                 >
                   {tab}
                 </button>
               ))}
             </div>
-            
-            {/* Deliveries */}
+
             <CardManifest
               settings={settings}
               deliveries={filteredManifest}
@@ -189,7 +181,7 @@ const Manifest = () => {
               handleSubmit={can("edit") ? handleSubmit : undefined}
               status={status}
               canEdit={can("edit")}
-              boxBreakdownShow = {true}
+              boxBreakdownShow={true}
             />
 
           </div>

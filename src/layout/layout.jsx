@@ -7,13 +7,12 @@ import { getAccountData } from "../api/account";
 
 import Sidebar from "../ui/sidebar";
 export const Layout = () => {
-  const { updateSettings, getUser, updateUser } = useAuth();  
-  
+  const { updateSettings, getUser, updateUser } = useAuth();
+  const user = getUser();
+
   useEffect(() => {
     let unsubscribe;
     let unsubscribeUser;
-
-    const user = getUser();
 
     if (user?.id) {
       getAccountData(user.id, (updatedUser) => {
@@ -23,7 +22,7 @@ export const Layout = () => {
       });
     }
 
-    getSettings((newSettings) => {      
+    getSettings((newSettings) => {
       // realtime
       updateSettings(newSettings);
     }).then((res) => {
@@ -45,9 +44,11 @@ export const Layout = () => {
       <div className="flex px-4 gap-4 w-full">
         <Sidebar />
         <div className="min-h-screen bg-white rounded-md w-full ml-9 ">
-          <div className="sticky top-0 z-20 bg-primary text-white w-full px-4">
-            You are {getUser().name} as the {getUser().role}
-          </div>
+          {user &&
+            <div className="sticky top-0 z-20 bg-primary text-white w-full px-4">
+              You are {getUser().name} as the {getUser().role}
+            </div>
+          }
           <Outlet />
         </div>
       </div>
@@ -66,7 +67,7 @@ export const AuthLayout = () => {
   }, [user]);
 
   return (
-    <div className="text-black">           
+    <div className="text-black">
       <Outlet />
     </div>
   );

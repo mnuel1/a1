@@ -7,7 +7,7 @@ export const loginWithCredentials = async (login, loginID, password) => {
   try {
     const { data, error } = await supabase
       .from('user')
-      .select('id', 'name', 'password', 'role', 'access', 'status', 'login_id')
+      .select('id, name, password, role, access, status, login_id')
       .eq('login_id', loginID)
       .single();
     

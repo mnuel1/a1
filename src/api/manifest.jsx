@@ -1,48 +1,5 @@
 import { supabase, supaClient } from "../supabaseClient";
-import { GoogleGenAI } from "@google/genai";
 import * as XLSX from "xlsx"
-
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_KEY });
-
-const extractCityProvinceRegion = async (addresses) => {
-  const prompt = `You are an address parser. For each address below, extract the **City**, **Province**, and **Region** in the Philippines. 
-Respond with a JSON array of strings where each entry is formatted exactly like: "City, Province, Region".
-
-🟡 Important:
-- If the city is part of Metro Manila, use "Metro Manila" as the province.
-- Ensure all three parts (City, Province, Region) are present.
-- Do not return null, empty values, or "Unknown".
-- Maintain the same index order as the input list.
-- Only return the JSON array. Do not include explanations or code block formatting.
-
-  Addresses:
-  ${addresses.map((addr, i) => `${i + 1}. ${addr}`).join("\n")}
-  `;
-
-  const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-  });
-
-  let text = response.text || "";
-  console.log("Raw response:", text);
-
-  const match = text.match(/\[([\s\S]*?)\]/);
-  const jsonArrayText = match ? `[${match[1]}]` : null;
-
-  if (!jsonArrayText) {
-    console.error("No array found in response.");
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(jsonArrayText);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    console.error("Failed to parse JSON array:", jsonArrayText);
-    return [];
-  }
-};
 
 export const uploadManifest = async (manifestData) => {
   try {
@@ -71,7 +28,7 @@ export const uploadManifest = async (manifestData) => {
       const { data: insertedShipment, error: insertErr } = await supaClient.insert(
         "shipments",
         {
-          shipment_number: shipmentNo,
+          shipmehent_number: shipmentNo,
           container_number: containerNo,
           total_boxes: parseInt(totalBoxes),
         },
@@ -190,86 +147,35 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restri
   }
 };
 
-export const searchDeliveries = async (query, restrictions = {}) => {
+export const searchDeliveries = async (query) => {
   try {
-    if (!query || !query.trim()) {
-      throw new Error("Search query cannot be empty");
-    }
+    if (!query?.trim()) throw new Error("Search query cannot be empty");
 
-    let queryBuilder = supabase
-      .from("deliveries")
-      .select(
-        `
-        *,
-        shipments (
-          shipment_number,
-          container_number
-        ),
-        delivery_boxes (
-          box_id,
-          barcode,
-          status
-        )
-      `
-      )
-      .or(
-        `shipper_name.ilike.%${query}%,tracking_number.ilike.%${query}%,barcode_no.ilike.%${query}%,consignee.ilike.%${query}%`
-      )
-      .limit(1);
+    const { data, error } = await supabase.rpc("search_deliveries", { query });
 
-    if (restrictions.region?.length) {
-      queryBuilder = queryBuilder.in(
-        "destination",
-        restrictions.region.map((r) => r.toUpperCase())
-      );
-    }
+    if (error) throw error;
 
-    if (restrictions.city?.length) {
-      restrictions.city.forEach((city) => {
-        const normalized = city.toLowerCase().replace(" city", "").trim();
-        queryBuilder = queryBuilder.ilike("city", `%${normalized}%`);
-      });
-    }
-
-    const { data: initial, error: initialError } = await queryBuilder.limit(50);
-
-    if (initialError) throw initialError;
-
-    if (!initial || initial.length === 0) {
+    if (!data || data.length === 0) {
       return { searchResult: [], searchFound: false };
     }
 
-    const match = initial[0];
+    const match = data[0];
 
-    const { data: relatedMatches, error: relatedError } = await supabase
-      .from("deliveries")
-      .select(
-        `
-          *,
-          shipments (
-            shipment_number,
-            container_number
-          )
-        `
-      )
-      .neq("delivery_id", match.delivery_id)
-      .or(
-        `shipper_name.ilike.${match.shipper_name},consignee.ilike.${match.consignee}`
-      );
+    // simulate your "related matches" logic
+    const relatedMatches = data.filter(d => d.delivery_id !== match.delivery_id);
 
-    if (relatedError) {
-      return { searchResult: [], searchFound: false };
-    }
-    const results = [match, ...(relatedMatches || [])];
+    const results = [match, ...relatedMatches];
 
     return {
       searchResult: results,
       searchFound: results.length > 0,
     };
   } catch (error) {
+    console.error(error);
     return { searchResult: [], searchFound: false };
   }
 };
+
 
 export const createDelivery = async (formData) => {
   try {

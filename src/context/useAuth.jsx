@@ -28,9 +28,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (userData) => {
     const token = auth.generateSessionToken();
     const session = await auth.createSession(token, userData.id);
-
     localStorage.setItem("user", JSON.stringify(userData));
-
     setUser(userData);
     setSession(session);
 
@@ -70,7 +68,8 @@ export const AuthProvider = ({ children }) => {
     const page = window.location.pathname.split("/").filter(Boolean).pop();
     const cuser = getUser()
     if (!cuser?.access) return false;
-    const access = cuser.access;
+    const access = cuser.access
+    
     const pagePermissions = access.permissions?.[page];
     if (!pagePermissions) return false;
     return !!pagePermissions[action];

@@ -1,0 +1,59 @@
+create or replace function public.search_deliveries(
+  query text,
+  regions text[] default null,
+  cities text[] default null
+)
+returns table (
+  delivery_id int,
+  shipment_id int,
+  tracking_number text,
+  agent text,
+  shipper_name text,
+  shipper_ctc text,
+  consignee text,
+  consignee_address text,
+  consignee_ctc text,
+  destination text,
+  city text,
+  qty int,
+  shipments jsonb,
+  delivery_boxes jsonb
+) as $$
+begin
+  return query
+    select
+      d.delivery_id,
+      d.shipment_id,
+      d.tracking_number,
+      d.agent,
+      d.shipper_name,
+      d.shipper_ctc,
+      d.consignee,
+      d.consignee_address,
+      d.consignee_ctc,
+      d.destination,
+      d.city,
+      d.qty,
+      to_jsonb(s.*) as shipments,
+      coalesce(jsonb_agg(to_jsonb(b) order by b.box_id) filter (where b.box_id is not null), '[]'::jsonb) as delivery_boxes
+    from deliveries d
+    left join shipments s on s.shipment_id = d.shipment_id
+    left join delivery_boxes b on b.delivery_id = d.delivery_id
+    where (
+      d.shipper_name ilike '%' || query || '%'
+      or d.tracking_number ilike '%' || query || '%'
+      or d.consignee ilike '%' || query || '%'
+      or b.barcode ilike '%' || query || '%'
+    )
+    and (regions is null or upper(d.destination) = any(regions))
+    and (
+      cities is null
+      or exists (
+        select 1 from unnest(cities) c
+        where lower(d.city) like '%' || replace(c, ' city', '') || '%'
+      )
+    )
+    group by d.delivery_id, s.shipment_id;
+end;
+$$ language plpgsql stable;
+    

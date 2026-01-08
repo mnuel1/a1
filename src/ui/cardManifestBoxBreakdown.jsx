@@ -3,7 +3,7 @@ const BoxBreakdown = ({
   totalBoxes = 0,
   deliveredBoxes = 0,
   boxes = [],
-  statusOptions = [],
+  statusOptions = [], 
   editable,
   onChange
 }) => {
