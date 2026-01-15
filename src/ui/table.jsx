@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/useAuth";
 import { useLoading } from "../context/useLoading";
 import { useStatusShipment } from "../context/useStatusShipment";
-import { updateDelivery } from "../api/manifest";
+import { updateDelivery, updateShipment, createDelivery, insertDeliveryBoxes } from "../api/manifest";
 
 import toast from "react-hot-toast";
-import { ChevronDown, ChevronRight, FileSpreadsheet } from "lucide-react";
+import { ChevronDown, ChevronRight, FileSpreadsheet, PlusIcon } from "lucide-react";
 
 import DataTable from "react-data-table-component";
 
-import { buildColumns, submitManifestEdits, applyFieldChange } from "../utils/helper";
+import { buildColumns, submitManifestEdits, submitManifestCreate, applyFieldChange } from "../utils/helper";
 
 import {
   getDeliveries,
@@ -43,6 +43,7 @@ const ManifestTable = () => {
     setEditedData({});
     setSelectedDelivery(row);
     setModalMode(action); // 'view' or 'edit'
+
   }, can('edit'));
 
   useEffect(() => {
@@ -92,8 +93,50 @@ const ManifestTable = () => {
     setLoading(false)
   };
 
+  const handleAddDelivery = async () => {
+
+    const match = shipmentNumbers.find(
+      s => s.shipment_number === shipmentNumber
+    );
+
+    if (match) {
+      const { shipment_number: shipmentno, container_number: containerno } = match;
+      console.log(shipmentno, containerno);
+      
+      setEditedData({});
+      setSelectedDelivery({
+        delivery_id: "new",
+        shipment_number: shipmentno,
+        container_number: containerno,
+        tracking_number: "",
+        qty: "0",
+        agent: "",
+        shipper_name: "",
+        shipper_ctc: "",
+        consignee: "",
+        consignee_address: "",
+        consignee_ctc: "",
+        received_by: "",
+        destination: "",
+        date_out_for_delivery: null,
+        date_received: null,
+        city: "",
+        delivered_qty: null,
+        delivery_boxes: [
+          {
+            box_id: 1,
+            status: "NONE",
+            barcode: ""
+          }
+        ]
+      });
+      setModalMode("create");
+    }
+  }
+
   const handleModalFieldChange = (id, key, value) => {
-    if (modalMode !== "edit") return;
+
+    if (modalMode != "edit" && modalMode != "create") return;
 
     const boxMatch = key.match(/^box_(\d+)_(barcode|status)$/);
 
@@ -114,7 +157,7 @@ const ManifestTable = () => {
         deliveryId: id,
         field: key,
         value,
-        setEditedData,
+        setEditedData
       });
       return;
     }
@@ -128,11 +171,28 @@ const ManifestTable = () => {
       deliveryId: id,
       field: key,
       value,
-      setEditedData,
+      setEditedData
     });
   };
 
   const handleModalSubmit = async () => {
+
+    if (modalMode === 'create') {
+      await submitManifestCreate({
+        selectedDelivery,
+        createDelivery,
+        updateShipment,
+        insertDeliveryBoxes,
+        setLoading,
+        toast,
+        onSuccess: () => {
+          setSelectedDelivery(null);
+          setEditedData({});
+        },
+      });
+      return
+    }
+
     await submitManifestEdits({
       editedData,
       updateDelivery,
@@ -186,13 +246,13 @@ const ManifestTable = () => {
         <div className="space-y-2">
           {(data.delivery_boxes ?? []).map((box, index) => (
             <div
-            key={box.box_id}
-            className="grid grid-cols-[20px_160px_160px] gap-2 items-center"
-          >
-            <span>{index + 1}.</span>
-            <p className="px-2 py-1">{box.barcode}</p>
-            <p className="px-2 py-1">{box.status}</p>
-          </div>
+              key={box.box_id}
+              className="grid grid-cols-[20px_160px_160px] gap-2 items-center"
+            >
+              <span>{index + 1}.</span>
+              <p className="px-2 py-1">{box.barcode}</p>
+              <p className="px-2 py-1">{box.status}</p>
+            </div>
           ))}
         </div>
       </div>
@@ -212,9 +272,18 @@ const ManifestTable = () => {
             onChange={setShipmentNumber}
           />
         </div>
-        <div className="flex items-center">
-          {can('export') && <button
+
+        <div className="flex items-center gap-2">
+          {/* disabled for now */}
+          {/* {can('create') && <button
             className="flex gap-2 w-full bg-primary px-3 py-2 text-white rounded-lg whitespace-nowrap cursor-pointer hover:bg-primary-60"
+            onClick={handleAddDelivery}
+          >
+            <PlusIcon /> Add delivery
+          </button>} */}
+
+          {can('export') && <button
+            className="flex gap-2 w-full text-black border border-primary px-3 py-2 rounded-lg whitespace-nowrap cursor-pointer hover:border-primary-60 hover:text-primary-60"
             onClick={handleExport}
           >
             <FileSpreadsheet /> Export to Excel
@@ -227,8 +296,8 @@ const ManifestTable = () => {
             Click the
             <p className="w-fit font-bold text-gray  -500">
               <ChevronRight />
-            </p> 
-            to see the 
+            </p>
+            to see the
             <strong className="mx-1"> barcodes </strong> and their <strong className="mx-1"> status </strong>.
           </div>
         </div>
@@ -238,7 +307,7 @@ const ManifestTable = () => {
             columns={columns}
             data={deliveries}
             pagination
-            paginationPerPage={200} // default rows per page
+            paginationPerPage={25} // default rows per page
             paginationRowsPerPageOptions={[10, 25, 50, 100, 200]} // options in the dropdown
             highlightOnHover
             sortIcon={<ChevronDown />}
@@ -274,15 +343,6 @@ const ManifestTable = () => {
       {selectedDelivery && (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/50">
           <div className="bg-white p-6 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-auto relative">
-            <button
-              className="absolute top-2 right-4 text-red-500 hover:text-red-700 px-2 py-1 rounded-full text-2xl font-bold cursor-pointer"
-              onClick={() => {
-                setSelectedDelivery(null);
-                setEditedData({});
-              }}
-            >
-              ✕
-            </button>
 
             <CardManifest
               settings={getSettings().columns.values ?? []}
@@ -292,6 +352,12 @@ const ManifestTable = () => {
               canEdit={can("edit")}
               handleFieldChange={handleModalFieldChange}
               handleSubmit={handleModalSubmit}
+              isCreate={modalMode === "create"}
+              isModalView={true}
+              modalClose={() => {
+                setSelectedDelivery(null);
+                setEditedData({});
+              }}
             />
 
           </div>

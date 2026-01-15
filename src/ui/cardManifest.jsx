@@ -11,6 +11,9 @@ const CardManifest = ({
   canEdit = false,
   isReadOnly = false,
   boxBreakdownShow = true,
+  isCreate = false,
+  isModalView = false,
+  modalClose
 }) => {
   const CARD_FLAG = DISPLAYFLAG.CARD;
   const editable = canEdit && !isReadOnly;
@@ -41,7 +44,7 @@ const CardManifest = ({
         return (
           <div
             key={item.delivery_id}
-            className="border rounded-lg p-6 shadow-sm bg-white max-w-8xl mx-auto text-sm"
+            className={`${!isModalView ? 'border  rounded-lg p-6 shadow-sm ' : ''} bg-white max-w-8xl mx-auto text-sm`}
           >
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
@@ -71,15 +74,15 @@ const CardManifest = ({
                           let value = item[f.cardKey] ?? "";
 
                           if (f.cardKey === "shipment_number")
-                            value = item.shipments?.shipment_number ?? "";
+                            value = isCreate ? item.shipment_number ?? "" : item.shipments?.shipment_number ?? "";
 
                           if (f.cardKey === "container_number")
-                            value = item.shipments?.container_number ?? "";
+                            value = isCreate ? item.shipment_number ?? "" : item.shipments?.container_number ?? "";
 
                           return (
                             <CardInput
                               key={f.cardKey}
-                              type={f.type}
+                              type={f.cardKey === 'tracking_number' && isCreate ? 'inline-text' : f.type}
                               keyName={f.cardKey}
                               label={f.label}
                               value={value}
@@ -109,20 +112,29 @@ const CardManifest = ({
                   statusOptions={status}
                   editable={editable}
                   onChange={handleFieldChange}
+                  isCreate={isCreate}
                 />
               )}
             </div>
 
-            <button
-              onClick={handleSubmit}
-              disabled={!editable}
-              className={`px-4 py-1 rounded-lg my-2 text-white ${editable
-                ? "bg-primary hover:bg-primary-60"
-                : "bg-gray-400 cursor-not-allowed"
-                }`}
-            >
-              Update
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={handleSubmit}
+                disabled={!editable}
+                className={`cursor-pointer w-full px-4 py-2 rounded-lg mt-4 text-xl text-white ${editable
+                  ? "bg-primary hover:bg-primary-60"
+                  : "bg-gray-400 cursor-not-allowed"
+                  }`}
+              >
+                {isCreate ? "Submit" : "Update"}
+              </button>
+              <button
+                onClick={modalClose}
+                className={`cursor-pointer w-full px-4 py-2 rounded-lg mt-4 text-xl text-black border-primary border-2 hover:text-primary`}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         );
       })}

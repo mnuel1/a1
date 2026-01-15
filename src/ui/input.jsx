@@ -46,6 +46,21 @@ export const CardInput = ({
     );
   }
 
+  if (type === 'inline-text') {
+    return (
+      <div key={keyName} className="flex gap-2">
+        <strong>{label}</strong>
+        <input
+          type="text"
+          className="border px-2 rounded"
+          onChange={(e) =>
+            editable &&
+            handleFieldChange(parentid, keyName, e.target.value)
+          } />
+      </div>
+    )
+  }
+
   if (type === "text" || type === "date") {
     return (
       <label key={keyName} className="block mb-1">

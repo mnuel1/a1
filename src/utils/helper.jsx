@@ -15,7 +15,7 @@ export const buildColumns = (config, onAction, canEdit) => {
               >
                 <Eye size={14} />
               </button>
-              {canEdit && 
+              {canEdit &&
                 <button
                   className="text-blue-500 py-1 rounded text-xs hover:text-blue-600 cursor-pointer"
                   onClick={() => onAction?.(row, "edit")}
@@ -43,11 +43,11 @@ export const buildColumns = (config, onAction, canEdit) => {
         sortable: col.sortable || false,
         style: col.sticky
           ? {
-              position: "sticky",
-              right: 0,
-              minWidth: col.minWidth || "120px",
-              backgroundColor: "white",
-            }
+            position: "sticky",
+            right: 0,
+            minWidth: col.minWidth || "120px",
+            backgroundColor: "white",
+          }
           : {},
       };
     });
@@ -63,28 +63,43 @@ export const applyFieldChange = ({
 }) => {
   const boxMatch = field.match(/^box_(\d+)_(barcode|status)$/);
 
-  // 🧱 BOX FIELD
   if (boxMatch) {
     const [, boxId, boxField] = boxMatch;
     const numericBoxId = Number(boxId);
 
-    // update manifestData (UI state)
     setManifestData?.(prev =>
-      prev.map(item =>
-        item.delivery_id === deliveryId
-          ? {
-              ...item,
-              delivery_boxes: (item.delivery_boxes ?? []).map(box =>
-                box.box_id === numericBoxId
-                  ? { ...box, [boxField]: value }
-                  : box
-              ),
-            }
-          : item
-      )
+      prev.map(item => {
+        if (item.delivery_id !== deliveryId) return item;
+
+        const existingBoxes = item.delivery_boxes ?? [];
+        const index = existingBoxes.findIndex(
+          box => box.box_id === numericBoxId
+        );
+
+        let updatedBoxes;
+
+        if (index >= 0) {
+
+          updatedBoxes = existingBoxes.map(box =>
+            box.box_id === numericBoxId
+              ? { ...box, [boxField]: value }
+              : box
+          );
+        } else {
+
+          updatedBoxes = [
+            ...existingBoxes,
+            { box_id: numericBoxId, [boxField]: value },
+          ];
+        }
+
+        return {
+          ...item,
+          delivery_boxes: updatedBoxes,
+        };
+      })
     );
 
-    // update editedData (payload state)
     setEditedData(prev => {
       const existingBoxes = prev.delivery_boxes ?? [];
       const index = existingBoxes.findIndex(
@@ -92,6 +107,7 @@ export const applyFieldChange = ({
       );
 
       let updatedBoxes;
+
       if (index >= 0) {
         updatedBoxes = existingBoxes.map(b =>
           b.box_id === numericBoxId
@@ -160,6 +176,94 @@ export const submitManifestEdits = async ({
   } catch (err) {
     console.error(err);
     toast.error("Update failed.");
+    onError?.(err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+export const submitManifestCreate = async ({
+  selectedDelivery,
+  createDelivery,
+  updateShipment,
+  insertDeliveryBoxes,
+  setLoading,
+  toast,
+  onSuccess,
+  onError,
+}) => {
+  if (!selectedDelivery) {
+    toast.error("No delivery data to submit.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const {
+      delivery_id,          // ❌ ignore
+      shipment_number,
+      container_number,
+      delivery_boxes,
+      qty,
+      ...deliveryPayload
+    } = selectedDelivery;
+
+    /**
+     * 1️⃣ Update shipment & get shipment_id
+     */
+    const { data: shipment, error: shipmentError } =
+      await updateShipment({
+        shipment_number,
+        container_number,
+        qty: Number(qty ?? 0),
+      });
+
+    if (shipmentError || !shipment) {
+      throw shipmentError || new Error("Shipment not found");
+    }
+
+    const shipment_id = shipment.shipment_id;
+    console.log(shipment_id);
+    
+    return
+    /**
+     * 2️⃣ Insert delivery WITH shipment_id
+     */
+    const { data: insertedDelivery, error: insertError } =
+      await createDelivery({
+        ...deliveryPayload,
+        shipment_id,
+      });
+
+    if (insertError || !insertedDelivery) {
+      throw insertError || new Error("Failed to create delivery");
+    }
+
+    const newDeliveryId = insertedDelivery.delivery_id;
+
+    /**
+     * 3️⃣ Insert delivery boxes
+     */
+    if (Array.isArray(delivery_boxes) && delivery_boxes.length > 0) {
+      const boxesPayload = delivery_boxes.map(b => ({
+        delivery_id: newDeliveryId,
+        barcode: b.barcode,
+        status: b.status ?? "PENDING",
+      }));
+
+      const { error: boxesError } =
+        await insertDeliveryBoxes(boxesPayload);
+
+      if (boxesError) throw boxesError;
+    }
+
+    toast.success("Delivery created successfully.");
+    onSuccess?.(insertedDelivery);
+
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to create delivery.");
     onError?.(err);
   } finally {
     setLoading(false);

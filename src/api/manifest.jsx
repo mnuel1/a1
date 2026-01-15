@@ -419,3 +419,35 @@ export const exportToExcel = async (shipmentNumber, columns) => {
     return false
   }
 };
+
+export const updateShipment = async ({
+  shipment_number,
+  container_number,
+  qty,
+}) => {
+
+  console.log(shipment_number, container_number, qty);
+  
+  const { data: shipment, error } = await supaClient.select(
+    "shipments",
+    "*",
+    { shipment_number, container_number },
+    true
+  );
+
+  if (error || !shipment) return { error };
+
+  const updatedTotal = shipment.total_boxes + qty;
+
+  return supaClient.update(
+    "shipments",
+    { shipment_id: shipment.shipment_id },
+    { total_boxes: updatedTotal },
+    "*",
+    true
+  );
+};
+
+export const insertDeliveryBoxes = async (boxes) => {
+  return supaClient.insert("delivery_boxes", boxes);
+};

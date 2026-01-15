@@ -22,6 +22,9 @@ const Manifest = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState(null);
   const { showModal } = useModal();
+  const [searchOptions, setSearchOptions] = useState([]);
+  const [showSearchOptions, setShowSearchOptions] = useState(false);
+
 
   const { setLoading } = useLoading();
 
@@ -90,16 +93,18 @@ const Manifest = () => {
     setActiveTab(null);
 
     const result = await searchDeliveries(searchTerm.trim(), restrictions);
+
     if (!result.searchFound) {
       toast.error("Not found");
+      setSearchOptions([]);
+      setShowSearchOptions(false);
+      return;
     }
 
-    setManifestData(result.searchResult);
-
-    if (result.searchResult.length > 0) {
-      setActiveTab(`${result.searchResult[0].shipments.shipment_number} - ${result.searchResult[0].tracking_number.split("/")[0]}`);
-    }
+    setSearchOptions(result.searchResult);
+    setShowSearchOptions(true);
   };
+
 
   const shipmentTabs = Array.from(
     new Set(
@@ -117,6 +122,7 @@ const Manifest = () => {
   );
 
   const handleFieldChange = (deliveryId, field, value) => {
+
     applyFieldChange({
       deliveryId,
       field,
@@ -124,6 +130,9 @@ const Manifest = () => {
       setManifestData,
       setEditedData,
     });
+
+    console.log(editedData);
+
   };
 
   const handleSubmit = async () => {
@@ -147,9 +156,46 @@ const Manifest = () => {
           label=""
           placeholder={'Search a name, barcode, or tracking number here...'}
           value={searchTerm}
-          onChange={setSearchTerm}
+          onChange={(value) => {
+            setSearchTerm(value);
+            setShowSearchOptions(false);
+          }}  
           handleOnKeyDown={handleSearch}
         />
+        {showSearchOptions && searchOptions.length > 0 && (
+          <div className="relative z-20" >
+            <div className="absolute w-full bg-white border rounded-lg shadow-lg max-h-80 overflow-y-auto">
+              {searchOptions.map(item => {
+                const label = `${item.shipments.shipment_number} - ${item.tracking_number.split("/")[0]}`;
+
+                return (
+                  <button
+                    key={item.delivery_id}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                    onClick={() => {
+                      setManifestData(
+                        searchOptions.filter(
+                          d =>
+                            `${d.shipments.shipment_number} - ${d.tracking_number.split("/")[0]}` === label
+                        )
+                      );
+
+                      setActiveTab(label);
+                      setShowSearchOptions(false);
+                      setSearchOptions([]);
+                    }}
+                  >
+                    <div className="font-semibold">{label}</div>
+                    <div className="text-xs text-gray-500">
+                      {item.consignee} · {item.shipper_name}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
 
         {manifestData.length > 0 ? (
           <div className="w-full space-y-6">
