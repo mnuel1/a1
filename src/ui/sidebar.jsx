@@ -51,9 +51,9 @@ const Sidebar = () => {
 
     { name: "Profile", href: "/a1/account", icon: User },
 
-    ...(role?.toLowerCase() === "admin"
-      ? [{ name: "Settings", href: "/a1/settings", icon: Settings }]
-      : []),
+    // ...(role?.toLowerCase() === "admin"
+    //   ? [{ name: "Settings", href: "/a1/settings", icon: Settings }]
+    //   : []),
   ];
 
 
