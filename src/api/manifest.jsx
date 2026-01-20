@@ -28,7 +28,7 @@ export const uploadManifest = async (manifestData) => {
       const { data: insertedShipment, error: insertErr } = await supaClient.insert(
         "shipments",
         {
-          shipmehent_number: shipmentNo,
+          shipment_number: shipmentNo,
           container_number: containerNo,
           total_boxes: parseInt(totalBoxes),
         },
@@ -45,7 +45,6 @@ export const uploadManifest = async (manifestData) => {
         shipment_id: shipmentId,
         tracking_number: row["TRACKING NO."],
         qty: parseInt(row["NO. OF BOXES"]),
-        barcode_no: row["BARCODE NO."],
         agent: row["AGENT"],
         shipper_name: row["NAME OF SENDER"],
         shipper_ctc: row["CONTACT NO."],
@@ -54,7 +53,6 @@ export const uploadManifest = async (manifestData) => {
         consignee_ctc: row["CONTACT NO._1"],
         destination: row["DESTINATION"],
         city: row["CITY"],
-        status: null,
       };
     });
 

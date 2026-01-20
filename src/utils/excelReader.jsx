@@ -43,7 +43,7 @@ export const readSheet = (file, sheetName) => {
 };
 
 const buildDeliveryBoxes = (row, rowIndex) => {
-  const rawBarcodes = row["BARCODE NO."].trim();
+  const rawBarcodes = String(row["BARCODE NO."]).trim();
   const expectedQty = Number(row["NO. OF BOXES"]);
 
   if (!rawBarcodes) {
@@ -134,7 +134,7 @@ export const processSheet = async (setLoading, file, selectedSheet) => {
 
         console.log(payload);
 
-        // const result = await uploadManifest(payload);
+        const result = await uploadManifest(payload);
 
         if (!result.success) throw new Error("Something went wrong.");
 
