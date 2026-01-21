@@ -55,9 +55,33 @@ export const uploadManifest = async (manifestData) => {
         city: row["CITY"],
       };
     });
-
-    const { error: insertErr } = await supaClient.insert("deliveries", deliveryRows);
+    
+    const { data: insertedDeliveries, error: insertErr } = await supaClient.insert("deliveries", deliveryRows, "*");
     if (insertErr) throw insertErr;
+
+    console.log(insertedDeliveries);
+    
+    // 2️⃣ Prepare boxes
+    const boxRows = [];
+
+    insertedDeliveries.forEach((delivery, index) => {
+      const boxes = rows[index]["__delivery_boxes"] || [];
+      boxes.forEach((box) => {
+        boxRows.push({
+          delivery_id: delivery.delivery_id,
+          barcode: box.barcode,
+          status: "NONE",
+        });
+      });
+    });
+
+    // 3️⃣ Insert boxes
+    if (boxRows.length > 0) {
+      const { error: boxInsertErr } = await supaClient
+        .insert("delivery_boxes", boxRows)
+
+      if (boxInsertErr) throw boxInsertErr;
+    }
 
     return { success: true };
   } catch (error) {
