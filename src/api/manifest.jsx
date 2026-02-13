@@ -117,7 +117,7 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restri
       .select(`
         *, 
         shipments!inner(*),
-        delivery_boxes (
+        delivery_boxes!inner (
           box_id,
           barcode,
           status
@@ -129,8 +129,9 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restri
     }
 
     if (filters.status && filters.status !== "ALL") {
-      query = query.eq("status", filters.status);
+      query = query.eq("delivery_boxes.status", filters.status);
     }
+
 
     if (restrictions.region?.length) {
       const upperRegions = restrictions.region
