@@ -55,12 +55,12 @@ export const uploadManifest = async (manifestData) => {
         city: row["CITY"],
       };
     });
-    
+
     const { data: insertedDeliveries, error: insertErr } = await supaClient.insert("deliveries", deliveryRows, "*");
     if (insertErr) throw insertErr;
 
     console.log(insertedDeliveries);
-    
+
     // 2️⃣ Prepare boxes
     const boxRows = [];
 
@@ -86,6 +86,234 @@ export const uploadManifest = async (manifestData) => {
     return { success: true };
   } catch (error) {
     throw new Error(error.message); ``
+  }
+};
+
+/**
+ * update delivery boxes from Excel vs DB
+ * @param {Array} rows - Excel rows with __delivery_boxes
+ */
+export const updateDeliveryBoxesByExcel = async (rows, shipmentNo, showModal, toast) => {
+  try {
+    if (!rows || rows.length === 0) return;
+
+    // ─── 1. Fetch deliveries matching tracking numbers + shipment ─────────────
+    const trackingNumbers = rows.map(r => r["TRACKING NO."]);
+
+    const { data: deliveries, error: deliveryErr } = await supabase
+      .from("deliveries")
+      .select(`
+        delivery_id,
+        tracking_number,
+        shipments!inner (shipment_number)
+      `)
+      .in("tracking_number", trackingNumbers)
+      .eq("shipments.shipment_number", shipmentNo);
+
+    if (deliveryErr) throw deliveryErr;
+    if (!deliveries || deliveries.length === 0) throw new Error("No delivery record found");
+
+    const deliveryMap = Object.fromEntries(deliveries.map(d => [d.tracking_number, d.delivery_id]));
+    const deliveryIds = deliveries.map(d => d.delivery_id);
+
+    // ─── 2. Fetch all existing boxes for these deliveries ─────────────────────
+    const { data: existingBoxes, error: boxErr } = await supabase
+      .from("delivery_boxes")
+      .select("delivery_id, barcode, status")
+      .in("delivery_id", deliveryIds);
+
+    if (boxErr) throw boxErr;
+
+    // Group existing boxes by delivery_id
+    const deliveryBoxMap = {};
+    existingBoxes.forEach(b => {
+      if (!deliveryBoxMap[b.delivery_id]) deliveryBoxMap[b.delivery_id] = [];
+      deliveryBoxMap[b.delivery_id].push(b);
+    });
+
+    // ─── 3. Loop rows — collect actions ──────────────────────────────────────
+    const extraBoxes = [];          // Excel boxes not in DB → auto-insert
+    const missingDiscrepancies = []; // DB has more boxes than Excel → prompt
+    const statusDiscrepancies = [];  // Status mismatch at same index → prompt
+
+    const existingBarcodeSet = new Set(existingBoxes.map(b => `${b.delivery_id}-${b.barcode}`));
+
+    for (const row of rows) {
+      const deliveryId = deliveryMap[row["TRACKING NO."]];
+      if (!deliveryId) continue;
+
+      const excelBoxes = row.__delivery_boxes || [];
+      const dbBoxes = deliveryBoxMap[deliveryId] || [];
+      const minLen = Math.min(dbBoxes.length, excelBoxes.length);
+
+      // ── 3a. Auto-rename barcodes at same index (no modal) ──────────────────
+      for (let i = 0; i < minLen; i++) {
+        const dbBox = dbBoxes[i];
+        const excelBox = excelBoxes[i];
+
+        if (dbBox.barcode !== excelBox.barcode) {
+          const { error } = await supabase
+            .from("delivery_boxes")
+            .update({ barcode: excelBox.barcode })
+            .eq("delivery_id", deliveryId)
+            .eq("barcode", dbBox.barcode);
+
+          if (error) throw error;
+
+          // Keep existingBarcodeSet in sync so extra-box check stays accurate
+          existingBarcodeSet.delete(`${deliveryId}-${dbBox.barcode}`);
+          existingBarcodeSet.add(`${deliveryId}-${excelBox.barcode}`);
+          dbBox.barcode = excelBox.barcode; // update local ref for status check below
+        }
+      }
+
+      // ── 3b. Collect extra boxes (Excel has more than DB) ───────────────────
+      excelBoxes.forEach(b => {
+        const key = `${deliveryId}-${b.barcode}`;
+        if (!existingBarcodeSet.has(key)) {
+          extraBoxes.push({
+            delivery_id: deliveryId,
+            barcode: b.barcode,
+            status: b.status?.toUpperCase() || "PENDING"
+          });
+          existingBarcodeSet.add(key);
+        }
+      });
+
+      // ── 3c. Collect missing boxes discrepancy (DB has more than Excel) ──────
+      if (dbBoxes.length > excelBoxes.length) {
+        missingDiscrepancies.push({
+          delivery_id: deliveryId,
+          tracking_number: row["TRACKING NO."],
+          dbCount: dbBoxes.length,
+          excelCount: excelBoxes.length,
+          difference: dbBoxes.length - excelBoxes.length,
+          excelBoxes,
+        });
+      }
+
+      // ── 3d. Collect status discrepancies at same index ─────────────────────
+      const statusMismatches = [];
+      for (let i = 0; i < minLen; i++) {
+        const dbBox = dbBoxes[i];
+        const excelStatus = excelBoxes[i].status?.trim()?.toUpperCase() || null;
+        if (excelStatus && dbBox.status?.toUpperCase() !== excelStatus) {
+          statusMismatches.push({
+            "Shipment No.": shipmentNo,
+            "Tracking No.": row["TRACKING NO."],
+            "Barcode": dbBox.barcode,
+            "Old Box/s Status": dbBox.status,
+            "New Excel Box/s Status": excelStatus,
+            // Internal refs for update (not shown as columns)
+            __deliveryId: deliveryId,
+            __newStatus: excelStatus,
+          });
+        }
+      }
+
+      if (statusMismatches.length > 0) {
+        statusDiscrepancies.push(...statusMismatches);
+      }
+    }
+
+    // ─── 4. Auto-insert extra boxes + notify ─────────────────────────────────
+    if (extraBoxes.length > 0) {
+      const { error: insertErr } = await supabase
+        .from("delivery_boxes")
+        .insert(extraBoxes);
+
+      if (insertErr) throw insertErr;
+
+      await new Promise(resolve => {
+        showModal({
+          title: "Extra Boxes Added",
+          sub: "These boxes were not in the DB and have been added.",
+          type: "table",
+          data: extraBoxes.map(b => ({
+            "Delivery ID": b.delivery_id,
+            "Barcode": b.barcode,
+            "Status": b.status
+          })),
+          confirmText: "OK",
+          showCancel: false,
+          onConfirm: resolve,
+        });
+      });
+    }
+
+    // ─── 5. Missing boxes — selectable modal (per row = per tracking number) ──
+    if (missingDiscrepancies.length > 0) {
+      await new Promise(resolve => {
+        showModal({
+          title: "Missing Boxes Detected",
+          sub: "Select which deliveries to replace with Excel data. Deselected rows will be skipped.",
+          type: "selectable-table",
+          data: missingDiscrepancies.map(d => ({
+            "Tracking No.": d.tracking_number,
+            "Old Box/s Count": d.dbCount,
+            "New Excel Box/s Count": d.excelCount,
+            "Difference": d.difference,
+            // Hidden ref
+            __raw: d,
+          })),
+          onConfirm: async (selectedRows) => {
+            for (const row of selectedRows) {
+              const d = row.__raw;
+              await supabase
+                .from("delivery_boxes")
+                .delete()
+                .eq("delivery_id", d.delivery_id);
+
+              await supabase
+                .from("delivery_boxes")
+                .insert(d.excelBoxes.map(b => ({
+                  delivery_id: d.delivery_id,
+                  barcode: b.barcode,
+                  status: b.status?.toUpperCase() || "PENDING"
+                })));
+            }
+            resolve();
+          },
+          onCancel: resolve,
+        });
+      });
+    }
+
+    // ─── 6. Status discrepancies — selectable modal (all mismatches at once) ──
+    if (statusDiscrepancies.length > 0) {
+      // Strip internal refs from display data
+      const displayData = statusDiscrepancies.map(({ __deliveryId, __newStatus, ...visible }) => visible);
+
+      await new Promise(resolve => {
+        showModal({
+          title: "Status Discrepancy Detected",
+          sub: "Select which boxes to update. Deselected rows will be skipped.",
+          type: "selectable-table",
+          data: displayData,
+          onConfirm: async (selectedRows) => {
+            for (const row of selectedRows) {
+              // Match back to internal ref by index
+              const internal = statusDiscrepancies[displayData.indexOf(row)];
+              await supabase
+                .from("delivery_boxes")
+                .update({ status: internal.__newStatus })
+                .eq("delivery_id", internal.__deliveryId)
+                .eq("barcode", internal.Barcode);
+            }
+            resolve();
+          },
+          onCancel: resolve,
+        });
+      });
+    }
+
+    toast.success("Delivery boxes reconciliation completed successfully!");
+    return { success: true };
+
+  } catch (err) {
+    console.error(err);
+    toast.error(err.message || "Error reconciling delivery boxes");
+    return { success: false };
   }
 };
 
@@ -199,7 +427,6 @@ export const searchDeliveries = async (query) => {
   }
 };
 
-
 export const createDelivery = async (formData) => {
   try {
     const shipmentNumber = formData.shipment_number;
@@ -266,14 +493,14 @@ export const updateDelivery = async (deliveryId, updatedFields) => {
     if (deliveryId === "delivery_boxes") {
       for (const updatedBox of updatedFields) {
         const { box_id, barcode, status } = updatedBox;
-        
+
         const updatePayload = { box_id };
         if (barcode !== undefined && barcode !== null) updatePayload.barcode = barcode;
         if (status !== undefined && status !== null) updatePayload.status = status;
 
         const { data: boxData, error: boxError } = await supaClient.update(
           "delivery_boxes",
-          {box_id: box_id},
+          { box_id: box_id },
           updatePayload,
           "*"
         )
@@ -287,7 +514,8 @@ export const updateDelivery = async (deliveryId, updatedFields) => {
       return { success: true, message: `${deliveryId} updated successfully` };
     }
 
-    
+    console.log(updatedFields);
+
     const { data, error } = await supaClient.update(
       "deliveries",
       { delivery_id: deliveryId },
@@ -318,6 +546,11 @@ export const exportToExcel = async (shipmentNumber, columns) => {
           container_no:container_number,
           created_at,
           total_boxes
+        ),
+        delivery_boxes!inner(
+          box_id,
+          barcode,
+          status
         )
       `, { count: "exact" })
       .eq("shipments.shipment_number", shipmentNumber);
@@ -358,8 +591,13 @@ export const exportToExcel = async (shipmentNumber, columns) => {
         };
       }
 
-      regionSummary[region][sheetKey].Boxes += item.qty;
-      regionSummary[region][sheetKey].Delivered += item.delivered_qty || 0;
+      const boxes = item.delivery_boxes?.length || 0;
+      const delivered = item.delivery_boxes?.filter(
+        (b) => b.status === "DELIVERED"
+      ).length || 0;
+
+      regionSummary[region][sheetKey].Boxes += boxes;
+      regionSummary[region][sheetKey].Delivered += delivered;
     });
 
     let grandTotal = { Region: "Grand Total", Boxes: 0, Delivered: 0 };
@@ -421,6 +659,8 @@ export const exportToExcel = async (shipmentNumber, columns) => {
       const formattedRows = rows.map((r) => {
         const rowObj = {};
         printableColumns.forEach((col) => {
+          console.log(r);
+
           rowObj[col.label.toUpperCase()] = getRowValue(r, col);
         });
         return rowObj;
@@ -450,7 +690,7 @@ export const updateShipment = async ({
 }) => {
 
   console.log(shipment_number, container_number, qty);
-  
+
   const { data: shipment, error } = await supaClient.select(
     "shipments",
     "*",

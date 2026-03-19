@@ -100,7 +100,7 @@ const Report = () => {
 
               <h3 className="text-lg font-semibold">{row.destination}</h3>
               <div className="flex items-end">
-                <p className="text-3xl font-bold">{row.totalQty}</p>
+                <p className="text-3xl font-bold">{row.totalBoxes}</p>
                 <span className="text-sm font-medium ml-2">total boxes</span>
               </div>
               <div className="w-full text-right text-xs text-gray-600">click me to see full details</div>

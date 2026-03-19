@@ -227,6 +227,9 @@ const ManifestTable = () => {
             return updatedDelivery;
           })
         );
+        
+        console.log(editedData, deliveries);
+        
 
         setEditedData({});
         setSelectedDelivery(null);

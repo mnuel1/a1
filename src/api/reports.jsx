@@ -34,12 +34,6 @@ export const getAnalytics = async (shipmentNumber) => {
       const dest = box.deliveries.destination?.trim() || "UNKNOWN";
       const status = box.status?.trim() || "NONE";
       const city = normalizeCity(box.deliveries.city);
-      console.log(dest);
-
-      if (dest === 'UNKNOWN') {
-        console.log(box);
-        
-      }
       
       if (!destinationsMap[dest]) {
         destinationsMap[dest] = {
@@ -80,7 +74,8 @@ export const getAnalytics = async (shipmentNumber) => {
     cities = cities
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
-
+      console.log(destinations);
+      
     return { destinations, cities };
   } catch (error) {
     throw new Error(error.message);

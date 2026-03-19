@@ -25,40 +25,135 @@ const Manifest = () => {
   const [searchOptions, setSearchOptions] = useState([]);
   const [showSearchOptions, setShowSearchOptions] = useState(false);
 
-
   const { setLoading } = useLoading();
 
   const settings = getSettings()?.columns?.values ?? [];
   const status = getSettings()?.delivery_status?.values ?? [];
 
   const handleFileDrop = (file, sheetNames) => {
-    let selectedSheet = null;
+    let selectedSheet = null
+    let selectedMode = "insert"; // default;
 
     showModal({
-      title: "Select a Sheet",
+      title: "Select a Sheet and Mode",
       content: (
-        <div>
-          {sheetNames.map((name) => (
-            <label key={name} className="flex gap-2">
+        <div className="flex flex-col gap-4">
+          <div>
+            <strong>Choose a sheet:</strong>
+            {sheetNames.map((name) => (
+              <label key={name} className="flex gap-2 items-center mt-1">
+                <input
+                  type="radio"
+                  name="sheet"
+                  value={name}
+                  onChange={(e) => {
+                    selectedSheet = e.target.value;
+                  }}
+                />
+                {name}
+              </label>
+            ))}
+          </div>
+          <div>
+          <strong>Choose mode:</strong>
+            <label className="flex gap-2 items-center mt-1">
               <input
                 type="radio"
-                name="sheet"
-                value={name}
-                onChange={(e) => {
-                  selectedSheet = e.target.value;
-                }}
+                name="mode"
+                value="insert"
+                defaultChecked
+                onChange={() => (selectedMode = "insert")}
               />
-              {name}
+              Insert new manifest
             </label>
-          ))}
+            <label className="flex gap-2 items-center mt-1">
+              <input
+                type="radio"
+                name="mode"
+                value="reconcile"
+                onChange={() => (selectedMode = "reconcile")}
+              />
+              Reconcile / Update delivery boxes
+            </label>
+          </div>
         </div>
       ),
+      confirmText: "Continue",
       onConfirm: async () => {
         if (!selectedSheet) {
           toast.error("Please select a sheet first.");
           return;
         }
-        const result = await processSheet(setLoading, file, selectedSheet);
+        const result = await processSheet(
+          setLoading,
+          file,
+          selectedSheet,
+          {}, // overrides if shipment/container required
+          selectedMode, // pass insert or reconcile mode
+          showModal,    // pass modal to allow modals for reconciliation
+          toast         // pass toast to show messages in reconcile
+        );
+
+        if (result.requiresInput) {
+          let shipmentNo = "";
+          let containerNo = "";
+
+          showModal({
+            title: "Enter Shipment Details",
+            sub: "Shipment and Container not found. Please fill up before to proceed.",
+            content: (
+              <div className="flex gap-3">
+                <div className="flex gap-2 flex-col">
+                  <strong>Shipment Number</strong>
+                  <input
+                    type="text"
+                    className="border px-2 rounded"
+                    onChange={(e) => (shipmentNo = e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 flex-col">
+                  <strong>Container Number</strong>
+                  <input
+                    type="text"
+                    className="border px-2 rounded"
+                    onChange={(e) => (containerNo = e.target.value)}
+                  />
+                </div>
+
+              </div>
+            ),
+            confirmText: "Submit",
+            onConfirm: async () => {
+              if (!shipmentNo || !containerNo) {
+                toast.error("Both fields are required.");
+                return;
+              }
+              console.log(selectedMode);
+              
+              const retryResult = await processSheet(
+                setLoading,
+                file,
+                selectedSheet,
+                { shipmentNo, containerNo },
+                selectedMode,
+                showModal,
+                toast
+              );
+
+              if (!retryResult.success) {
+                toast.error(retryResult.message);
+                return;
+              }
+
+              toast.success(
+                selectedMode === "insert"
+                  ? "New manifest uploaded!"
+                  : "Reconciliation completed!"
+              );
+            },
+          });
+          return;
+        }
 
         if (!result.success) {
           const errorMessage = result.message || "Something went wrong while processing the sheet";
@@ -78,7 +173,11 @@ const Manifest = () => {
           return;
         }
 
-        toast.success("New manifest uploaded!")
+         toast.success(
+          selectedMode === "insert"
+            ? "New manifest uploaded!"
+            : "Reconciliation completed!"
+        );
       },
     });
   };
@@ -104,7 +203,6 @@ const Manifest = () => {
     setSearchOptions(result.searchResult);
     setShowSearchOptions(true);
   };
-
 
   const shipmentTabs = Array.from(
     new Set(
@@ -159,7 +257,7 @@ const Manifest = () => {
           onChange={(value) => {
             setSearchTerm(value);
             setShowSearchOptions(false);
-          }}  
+          }}
           handleOnKeyDown={handleSearch}
         />
         {showSearchOptions && searchOptions.length > 0 && (
@@ -195,7 +293,6 @@ const Manifest = () => {
             </div>
           </div>
         )}
-
 
         {manifestData.length > 0 ? (
           <div className="w-full space-y-6">

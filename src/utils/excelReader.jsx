@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { uploadManifest } from "../api/manifest";
+import { uploadManifest, updateDeliveryBoxesByExcel } from "../api/manifest";
 import { ALLOWED_DELIMITERS_REGEX, splitBarcodes } from "./helper";
 
 export const getSheetNames = (file) => {
@@ -43,13 +43,14 @@ export const readSheet = (file, sheetName) => {
 };
 
 const buildDeliveryBoxes = (row, rowIndex) => {
-  const rawBarcodes = String(row["BARCODE NO."]).trim();
+  const  rawBarcodes = String(row["BARCODE NO."]).trim();
   const expectedQty = Number(row["NO. OF BOXES"]);
 
   if (!rawBarcodes) {
-    throw new Error(
-      `Row ${rowIndex + 1}: BARCODE NO. is empty`
-    );
+    return Array.from({ length: expectedQty }, () => ({
+      barcode: "NO BARCODE FOUND",
+      ...("STATUS" in row ? { status: row["STATUS"] ?? null } : {})
+    }));
   }
 
   const isSingleBarcode = !/[;,\/]/.test(rawBarcodes);
@@ -59,16 +60,25 @@ const buildDeliveryBoxes = (row, rowIndex) => {
     throw new Error(
       `Row ${rowIndex + 1} (${row["TRACKING NO."]}): 
       BARCODE NO. must be separated using comma (,), semicolon (;), or slash (/). 
-      Please use either of those characters when seperating barcodes.`
+      Please use either of those characters when separating barcodes.`
     );
   }
+
   const barcodes = splitBarcodes(rawBarcodes);
 
   if (barcodes.length !== expectedQty) {
-    throw new Error(
-      `(${barcodes.length}) barcodes detected but it is not match with the number of boxes (${expectedQty}). Please check and correct the manifest before uploading it again.`
-    );
+    const missingCount = expectedQty - barcodes.length;
+    const filledBarcodes = [
+      ...barcodes,
+      ...Array.from({ length: missingCount }, () => "NO BARCODE FOUND")
+    ];
+
+    return filledBarcodes.map(barcode => ({
+      barcode,
+      ...("STATUS" in row ? { status: row["STATUS"] ?? null } : {})
+    }));
   }
+
   const hasStatusColumn = "STATUS" in row;
 
   return barcodes.map(barcode => ({
@@ -77,7 +87,15 @@ const buildDeliveryBoxes = (row, rowIndex) => {
   }));
 };
 
-export const processSheet = async (setLoading, file, selectedSheet) => {
+export const processSheet = async (
+  setLoading,
+  file,
+  selectedSheet,
+  overrides = {},
+  mode = "insert",
+  showModal,
+  toast
+) => {
   try {
     const excelData = await readSheet(file, selectedSheet);
 
@@ -86,9 +104,8 @@ export const processSheet = async (setLoading, file, selectedSheet) => {
     }
 
     const firstRow = excelData[0];
-    const shipmentNo = firstRow["SHIPMENT NO."] || "";
-    const containerNo = firstRow["CONTAINER NO."] || "";
-
+    const shipmentNo = overrides.shipmentNo || firstRow["SHIPMENT NO."] || "";
+    const containerNo = overrides.containerNo || firstRow["CONTAINER NO."] || "";
 
     const totalRow = excelData.find(
       (row) =>
@@ -125,26 +142,38 @@ export const processSheet = async (setLoading, file, selectedSheet) => {
         }
       }
 
-        const payload = {
-          shipmentNo,
-          containerNo,
-          totalBoxes,
-          manifestData: structuredManifest,
-        };
+      const payload = {
+        shipmentNo,
+        containerNo,
+        totalBoxes,
+        manifestData: structuredManifest,
+      };
 
-        console.log(payload);
-
-        const result = await uploadManifest(payload);
-
-        if (!result.success) throw new Error("Something went wrong.");
-
-        return { data: payload, success: true, message: null }
-      } else {
-        throw new Error("We detected that the sheet does not contain either a shipment number or a container number. Please double-check the manifest before uploading.");
+      let result
+      if (mode === "insert") {
+        // Normal upload
+        result = await uploadManifest(payload);
+      } else if (mode === "reconcile") {
+        // Reconciliation mode
+        result = await updateDeliveryBoxesByExcel(payload.manifestData, shipmentNo, showModal, toast);
       }
-    } catch (err) {
-      return { data: null, success: false, message: err?.message }
-    } finally {
-      setLoading(false);
+
+      if (!result.success) throw new Error("Something went wrong.");
+
+      return { data: payload, success: true, message: null }
+    } else {
+      return {
+        success: false,
+        message: "Missing shipment/container",
+        requiresInput: true,
+      };
     }
-  };
+  } catch (err) {
+    return { data: null, success: false, message: err?.message }
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
