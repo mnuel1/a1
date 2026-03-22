@@ -77,10 +77,11 @@ const ManifestTable = () => {
   }, [selectedStatus, shipmentNumber, filterText]);
 
   const handleExport = async () => {
-    if (!shipmentNumber) {
+    if (!shipmentNumber || shipmentNumber === 'All') {
       toast.error("Please select a shipment number first.");
       return;
     }
+
     setLoading(true);
 
     const result = exportToExcel(shipmentNumber, getSettings().columns.values ?? [])

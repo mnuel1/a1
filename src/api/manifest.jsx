@@ -329,6 +329,13 @@ export const getRecentManifest = async () => {
       return [];
     }
 
+    console.log(data);
+    
+    data.unshift({
+      shipment_number: "All",
+      container_number: ''
+    });
+
     return data.map(item => ({
       shipment_number: item.shipment_number,
       container_number: item.container_number
@@ -351,8 +358,11 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restri
           status
         )`, { count: "exact" })
       .range((page - 1) * rowLimit, page * rowLimit - 1);
-
-    if (filters.shipment_number) {
+    
+    if (
+      filters.shipment_number &&
+      filters.shipment_number.toLowerCase() !== "all"
+    ) {
       query = query.eq("shipments.shipment_number", filters.shipment_number);
     }
 
@@ -596,7 +606,7 @@ export const exportToExcel = async (shipmentNumber, columns) => {
         (b) => b.status === "DELIVERED"
       ).length || 0;
 
-      regionSummary[region][sheetKey].Boxes += boxes;
+      regionSummary[git][sheetKey].Boxes += boxes;
       regionSummary[region][sheetKey].Delivered += delivered;
     });
 

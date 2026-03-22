@@ -1,5 +1,5 @@
 export default {
-    title: '6 cities that have the most clients',
+    title: '',
     resizable: true,
     height: '500px',
     legend: { position: 'bottom' },

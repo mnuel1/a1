@@ -9,38 +9,37 @@ import { supabase } from "../supabaseClient";
 export const getAnalytics = async (shipmentNumber) => {
   try {
     // fetch boxes joined with deliveries and shipments
-    const { data, error } = await supabase
+    let query = supabase
       .from("delivery_boxes")
       .select(`
         delivery_id,
         status,
         deliveries!inner(
-          city,
           destination,
           shipment_id,
           shipments!inner(shipment_number)
         )
       `)
-      .eq("deliveries.shipments.shipment_number", shipmentNumber);
+
+    if (shipmentNumber && shipmentNumber !== "All") {
+      query = query.eq("deliveries.shipments.shipment_number", shipmentNumber);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
-
-    const normalizeCity = (city) =>
-      city ? city.replace(/city/i, "").trim() : "UNKNOWN";
 
     const destinationsMap = {};
 
     data.forEach((box) => {
       const dest = box.deliveries.destination?.trim() || "UNKNOWN";
       const status = box.status?.trim() || "NONE";
-      const city = normalizeCity(box.deliveries.city);
-      
+
       if (!destinationsMap[dest]) {
         destinationsMap[dest] = {
           destination: dest,
           totalBoxes: 0,
-          statusBreakdown: {}, // boxes per status
-          cities: {}, // boxes per city
+          statusBreakdown: {} // boxes per status
         };
       }
 
@@ -50,33 +49,19 @@ export const getAnalytics = async (shipmentNumber) => {
       // per status
       destinationsMap[dest].statusBreakdown[status] =
         (destinationsMap[dest].statusBreakdown[status] || 0) + 1;
-
-      // per city
-      destinationsMap[dest].cities[city] =
-        (destinationsMap[dest].cities[city] || 0) + 1;
     });
 
     const destinations = Object.values(destinationsMap);
 
-    // top 6 cities across all destinations
-    const citiesMap = {};
-    destinations.forEach((d) => {
-      Object.entries(d.cities).forEach(([city, count]) => {
-        citiesMap[city] = (citiesMap[city] || 0) + count;
-      });
-    });
+    const destinationSummary = Object.values(destinationsMap)
+    .map(d => ({
+      group: d.destination,
+      value: d.totalBoxes,
+      // statusBreakdown: d.statusBreakdown
+    }))
+    .sort((a, b) => b.value - a.value);
 
-    let cities = Object.entries(citiesMap).map(([group, value]) => ({
-      group,
-      value,
-    }));
-
-    cities = cities
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
-      console.log(destinations);
-      
-    return { destinations, cities };
+    return { destinations, destinationSummary };
   } catch (error) {
     throw new Error(error.message);
   }

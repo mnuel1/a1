@@ -35,7 +35,7 @@ const Report = () => {
       .then((res) => {
         console.log(res);
         
-        setPieData(res.cities)
+        setPieData(res.destinationSummary)
         if (res.destinations?.length) {
           setTotalBoxes(res.destinations);
         } else {
@@ -65,6 +65,7 @@ const Report = () => {
             options={shipmentNumbers}
             label=""
             onChange={setShipmentNumber}
+            canAll={false}
           />
         </div>
 

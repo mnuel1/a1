@@ -50,8 +50,7 @@ export const Shipments = ({
   label = "",
   value = "",
   options = [],
-  onChange,
-
+  onChange
 }) => {
 
   const finalOptions = options.length ? options : ["None"];
@@ -87,14 +86,16 @@ export const Shipments = ({
         </select>
       </LabeledField>
 
-      <LabeledField label="Container No." show={label.trim() !== ""}>
-        <input
-          type="text"
-          className="text-md w-full px-2 py-1 focus:ring-red-300 focus:outline-none cursor-normal"
-          value={selectedOption ? selectedOption.container_number : "-"}
-          readOnly
-        />
-      </LabeledField>
+      {selectedOption?.shipment_number && selectedOption.shipment_number !== 'All' &&
+        <LabeledField label="Container No." show={label.trim() !== ""}>
+          <input
+            type="text"
+            className="text-md w-full px-2 py-1 focus:ring-red-300 focus:outline-none cursor-normal"
+            value={selectedOption ? selectedOption.container_number : "-"}
+            readOnly
+          />
+        </LabeledField>
+      }
     </div>
   );
 };
