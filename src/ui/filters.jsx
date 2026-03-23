@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, Pencil } from "lucide-react";
 
 export const LabeledField = ({ label, children, show }) => {
   return (
@@ -17,15 +17,13 @@ export const Status = ({
   onChange }) => {
 
   const finalOptions = options
-  const [selectedValue, setSelectedValue] = useState(value || "ALL");
-
+  
   useEffect(() => {
-    setSelectedValue(value || "ALL");
+    onChange(value || "ALL")
   }, [value]);
 
   const handleChange = (e) => {
     let newValue = e.target.value;
-    setSelectedValue(newValue);
     if (onChange) onChange(newValue);
   };
 
@@ -33,7 +31,7 @@ export const Status = ({
     <LabeledField label={label} show={label.trim() !== ""}>
       <select
         className="text-md w-full rounded-lg border px-2 py-1 focus:ring-red-300 focus:outline-none cursor-pointer"
-        value={selectedValue}
+        value={value}
         onChange={handleChange}
       >
         {finalOptions.map((option) => (
@@ -50,7 +48,8 @@ export const Shipments = ({
   label = "",
   value = "",
   options = [],
-  onChange
+  onChange,
+  onEdit // new prop for opening edit modal
 }) => {
 
   const finalOptions = options.length ? options : ["None"];
@@ -71,7 +70,7 @@ export const Shipments = ({
   );
 
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4 items-center">
       <LabeledField label={label} show={label}>
         <select
           className="text-md w-full rounded-lg border px-2 py-1 focus:ring-red-300 focus:outline-none cursor-pointer"
@@ -86,20 +85,29 @@ export const Shipments = ({
         </select>
       </LabeledField>
 
-      {selectedOption?.shipment_number && selectedOption.shipment_number !== 'All' &&
-        <LabeledField label="Container No." show={label.trim() !== ""}>
-          <input
-            type="text"
-            className="text-md w-full px-2 py-1 focus:ring-red-300 focus:outline-none cursor-normal"
-            value={selectedOption ? selectedOption.container_number : "-"}
-            readOnly
-          />
-        </LabeledField>
-      }
+      {selectedOption?.shipment_number && selectedOption.shipment_number !== 'All' && (
+        <>
+          <LabeledField label="Container No." show={label.trim() !== ""}>
+            <input
+              type="text"
+              className="text-md w-[100px] px-2 py-1 focus:ring-red-300 focus:outline-none cursor-normal"
+              value={selectedOption ? selectedOption.container_number : "-"}
+              readOnly
+            />
+          </LabeledField>
+
+          {/* Edit Button */}
+          <button
+            className="p-2 mt-4 cursor-pointer bg-primary hover:bg-primary-60 text-white rounded-lg"
+            onClick={() => onEdit && onEdit(selectedOption)}
+          >
+            <Pencil size={16} />
+          </button>
+        </>
+      )}
     </div>
   );
 };
-
 
 export const SearchBar = ({ label = "Search", value = "", placeholder = "Search...", onChange, handleOnKeyDown }) => {
   const [query, setQuery] = useState(value || "");

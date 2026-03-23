@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/useAuth";
 import { useLoading } from "../context/useLoading";
+import { useModal } from "../context/useModal";
 import { useStatusShipment } from "../context/useStatusShipment";
 import { updateDelivery, updateShipment, createDelivery, insertDeliveryBoxes } from "../api/manifest";
 
@@ -18,6 +19,7 @@ import {
 
 import { Status, Shipments, SearchBar } from "./filters";
 import CardManifest from "./cardManifest";
+import ExpandedRow from "./expandedRow";
 
 const ManifestTable = () => {
   const { can, getRestrictions, getSettings } = useAuth()
@@ -30,14 +32,19 @@ const ManifestTable = () => {
     setSelectedStatus,
   } = useStatusShipment();
   const { setLoading } = useLoading();
+  const { showModal } = useModal();
   const [editedData, setEditedData] = useState({});
   const [filterText, setFilterText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(filterText);
 
   const [deliveries, setDeliveries] = useState([]);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [modalMode, setModalMode] = useState("view"); // 'view' or 'edit'
 
-  const rowLimit = 300
+  const [page, setPage] = useState(1);
+  const [totalRows, setTotalRows] = useState(0);
+
+  const rowLimit = 25
 
   const columns = buildColumns(getSettings().columns.values ?? [], (row, action) => {
     setEditedData({});
@@ -47,34 +54,44 @@ const ManifestTable = () => {
   }, can('edit'));
 
   useEffect(() => {
+    setPage(1);
+  }, [filterText, selectedStatus, shipmentNumber]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(filterText);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timeout);
+  }, [filterText]);
+
+  useEffect(() => {
     const restrictions = getRestrictions();
     setLoading(true)
-
-    if (selectedStatus, shipmentNumber) {
+    if (selectedStatus && shipmentNumber) {
       getDeliveries(
-        {
-          status: selectedStatus,
-          shipment_number: shipmentNumber
-        },
-        1,
-        rowLimit,
-        restrictions
-      ).then(({ data }) => {
-        const response = data.filter((item) => {
-          const search = filterText.toLowerCase();
-          return (
-            item?.tracking_number?.toString().toLowerCase().includes(search) ||
-            item?.shipper_name?.toLowerCase().includes(search) ||
-            item?.consignee?.toLowerCase().includes(search) ||
-            item?.barcode_no?.toLowerCase().includes(search)
-          );
-        });
-        setDeliveries(response);
-
-        setLoading(false)
+      {
+        status: selectedStatus,
+        shipment_number: shipmentNumber,
+        search: debouncedSearch
+      },
+      page,
+      rowLimit,
+      restrictions
+    )
+      .then(({ data, totalCount }) => {   
+        setDeliveries(data);
+        setTotalRows(totalCount);
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("We can't get the database right now. Please try again later ")
+      })
+      .finally(() => {
+        setLoading(false);
       });
     }
-  }, [selectedStatus, shipmentNumber, filterText]);
+  }, [selectedStatus, shipmentNumber, debouncedSearch, page]);
 
   const handleExport = async () => {
     if (!shipmentNumber || shipmentNumber === 'All') {
@@ -238,29 +255,62 @@ const ManifestTable = () => {
     });
   };
 
-  const ExpandedRow = ({ data }) => {
-    return (
-      <div className="p-4 bg-gray-50 border-t">
-        <div className="grid grid-cols-[20px_160px_160px] gap-2 text-xs font-semibold mb-2">
-          <span></span>
-          <span>Barcode No.</span>
-          <span>Status</span>
-        </div>
+  const handleEditShipment = (shipment) => {
+    let shipmentNo = shipment.shipment_number;
+    let containerNo = shipment.container_number;
 
-        <div className="space-y-2">
-          {(data.delivery_boxes ?? []).map((box, index) => (
-            <div
-              key={box.box_id}
-              className="grid grid-cols-[20px_160px_160px] gap-2 items-center"
-            >
-              <span>{index + 1}.</span>
-              <p className="px-2 py-1">{box.barcode}</p>
-              <p className="px-2 py-1">{box.status}</p>
-            </div>
-          ))}
+    showModal({
+      title: "Edit Shipment",
+      content: (
+        <div className="flex  gap-3">
+          <div className="flex flex-col">
+            <strong>Shipment Number</strong>
+            <input
+              defaultValue={shipmentNo}
+              className="border px-2 py-1 rounded"
+              onChange={(e) => (shipmentNo = e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <strong>Container Number</strong>
+            <input
+              defaultValue={containerNo}
+              className="border px-2 py-1 rounded"
+              onChange={(e) => (containerNo = e.target.value)}
+            />
+          </div>
         </div>
-      </div>
-    );
+      ),
+      confirmText: "Save",
+      onConfirm: async () => {
+        if (!shipmentNo || !containerNo) {
+          toast.error("Both fields are required.");
+          return;
+        }
+
+        try {
+          setLoading(true);
+
+          await updateShipment({
+            id: shipment.shipment_number,
+            shipment_number: shipmentNo,
+            container_number: containerNo,
+            qtyUpd: false
+          });
+
+          toast.success("Shipment updated!");
+
+          window.location.reload()
+
+        } catch (err) {
+          console.error(err);
+          toast.error("Failed to update shipment");
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   return (
@@ -268,12 +318,13 @@ const ManifestTable = () => {
       <div className="flex flex-col lg:flex-row justify-between w-full gap-2">
         <div className="flex items-center w-full gap-2 mb-4">
           <SearchBar label="Search" value={filterText} onChange={setFilterText} />
-          <Status label="Status" onChange={setSelectedStatus} options={statusOptions} />
+          <Status label="Status" value={selectedStatus} onChange={setSelectedStatus} options={statusOptions} />
           <Shipments
             value={shipmentNumber}
             options={shipmentNumbers}
             label="Shipment No."
             onChange={setShipmentNumber}
+            onEdit={handleEditShipment}
           />
         </div>
 
@@ -311,8 +362,10 @@ const ManifestTable = () => {
             columns={columns}
             data={deliveries}
             pagination
-            paginationPerPage={25} // default rows per page
-            paginationRowsPerPageOptions={[10, 25, 50, 100, 200]} // options in the dropdown
+            paginationServer   // 🔥 IMPORTANT
+            paginationTotalRows={totalRows}
+            paginationPerPage={rowLimit}
+            onChangePage={(page) => setPage(page)}
             highlightOnHover
             sortIcon={<ChevronDown />}
             persistTableHead

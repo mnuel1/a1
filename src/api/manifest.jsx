@@ -358,7 +358,16 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restri
           status
         )`, { count: "exact" })
       .range((page - 1) * rowLimit, page * rowLimit - 1);
-    
+        
+    if (filters.search && filters.search.trim() !== "") {
+      const sanitized = filters.search.replace(/,/g, "");
+      const search = `%${sanitized}%`;
+
+      query = query.or(
+        `tracking_number.ilike.${search},shipper_name.ilike.${search},consignee.ilike.${search}`
+      );
+    }
+
     if (
       filters.shipment_number &&
       filters.shipment_number.toLowerCase() !== "all"
@@ -396,6 +405,8 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restri
 
     const { data, error, count } = await query;
 
+    console.log(data, count);
+    
     if (error) {
       console.error("Error fetching deliveries:", error);
       return { data: [], totalCount: 0 };
@@ -694,20 +705,30 @@ export const exportToExcel = async (shipmentNumber, columns) => {
 };
 
 export const updateShipment = async ({
+  id = null,
   shipment_number,
   container_number,
   qty,
+  qtyUpd = true
 }) => {
 
-  console.log(shipment_number, container_number, qty);
+  if (!qtyUpd) {
+    return supaClient.update(
+      "shipments",
+      { shipment_number: id },
+      { shipment_number,  container_number },
+      "*",
+      true
+    );
 
+  }
   const { data: shipment, error } = await supaClient.select(
     "shipments",
     "*",
     { shipment_number, container_number },
     true
   );
-
+  
   if (error || !shipment) return { error };
 
   const updatedTotal = shipment.total_boxes + qty;
