@@ -135,7 +135,7 @@ const BoxBreakdown = ({
 
 
       <hr className="my-2" />
-      {editable && (
+      {/* {editable && (
         <div className="flex gap-2 mb-3 my-2 justify-end items-center">
           <button
             type="button"
@@ -154,7 +154,7 @@ const BoxBreakdown = ({
           />
 
         </div>
-      )}
+      )} */}
     </div>
   );
 };
