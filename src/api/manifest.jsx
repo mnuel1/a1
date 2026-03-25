@@ -617,7 +617,7 @@ export const exportToExcel = async (shipmentNumber, columns) => {
         (b) => b.status === "DELIVERED"
       ).length || 0;
 
-      regionSummary[git][sheetKey].Boxes += boxes;
+      regionSummary[region][sheetKey].Boxes += boxes;
       regionSummary[region][sheetKey].Delivered += delivered;
     });
 
@@ -680,8 +680,6 @@ export const exportToExcel = async (shipmentNumber, columns) => {
       const formattedRows = rows.map((r) => {
         const rowObj = {};
         printableColumns.forEach((col) => {
-          console.log(r);
-
           rowObj[col.label.toUpperCase()] = getRowValue(r, col);
         });
         return rowObj;

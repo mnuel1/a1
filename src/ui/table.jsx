@@ -101,8 +101,9 @@ const ManifestTable = () => {
 
     setLoading(true);
 
-    const result = exportToExcel(shipmentNumber, getSettings().columns.values ?? [])
-
+    const result = await exportToExcel(shipmentNumber, getSettings().columns.values ?? [])
+    console.log(result);
+    
     if (!result) {
       toast.error("We can't export it.");
     }
