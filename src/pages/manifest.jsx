@@ -221,6 +221,8 @@ const Manifest = () => {
 
   const handleFieldChange = (deliveryId, field, value) => {
 
+    console.log(manifestData);
+    
     applyFieldChange({
       deliveryId,
       field,

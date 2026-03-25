@@ -61,11 +61,44 @@ export const applyFieldChange = ({
   setManifestData,
   setEditedData,
 }) => {
-  const boxMatch = field.match(/^box_(\d+)_(barcode|status)$/);
+  const boxMatch = field.match(/^box_(\d+)_(barcode|status|init)$/);
 
   if (boxMatch) {
     const [, boxId, boxField] = boxMatch;
+    console.log(boxField);
+
     const numericBoxId = Number(boxId);
+    console.log(numericBoxId);
+
+    if (boxField === "init") {
+      console.log(boxField);
+
+      const newBox = value;
+
+      setManifestData?.(prev =>
+        prev.map(item => {
+          if (item.delivery_id !== deliveryId) return item;
+
+          const existingBoxes = item.delivery_boxes ?? [];
+
+          return {
+            ...item,
+            delivery_boxes: [...existingBoxes, newBox],
+          };
+        })
+      );
+
+      setEditedData(prev => {
+        const existingBoxes = prev.delivery_boxes ?? [];
+
+        return {
+          ...prev,
+          delivery_boxes: [...existingBoxes, newBox],
+        };
+      });
+
+      return; // ✅ EARLY EXIT (important)
+    }
 
     setManifestData?.(prev =>
       prev.map(item => {
@@ -224,9 +257,6 @@ export const submitManifestCreate = async ({
     }
 
     const shipment_id = shipment.shipment_id;
-    console.log(shipment_id);
-    
-    return
     /**
      * 2️⃣ Insert delivery WITH shipment_id
      */

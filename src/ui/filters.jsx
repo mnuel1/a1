@@ -17,7 +17,7 @@ export const Status = ({
   onChange }) => {
 
   const finalOptions = options
-  
+
   useEffect(() => {
     onChange(value || "ALL")
   }, [value]);
@@ -97,12 +97,14 @@ export const Shipments = ({
           </LabeledField>
 
           {/* Edit Button */}
-          <button
-            className="p-2 mt-4 cursor-pointer bg-primary hover:bg-primary-60 text-white rounded-lg"
-            onClick={() => onEdit && onEdit(selectedOption)}
-          >
-            <Pencil size={16} />
-          </button>
+          {onEdit &&
+            <button
+              className="p-2 mt-4 cursor-pointer bg-primary hover:bg-primary-60 text-white rounded-lg"
+              onClick={() => onEdit && onEdit(selectedOption)}
+            >
+              <Pencil size={16} />
+            </button>
+          }
         </>
       )}
     </div>

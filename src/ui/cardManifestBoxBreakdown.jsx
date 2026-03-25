@@ -11,12 +11,15 @@ const BoxBreakdown = ({
   onChange,
   isCreate = false
 }) => {
-  const [localBoxes, setLocalBoxes] = useState([]);
+  const [localBoxes, setLocalBoxes] = useState(boxes);
   const [addCount, setAddCount] = useState(1);
 
-  useEffect(() => {
-    setLocalBoxes(boxes);
-  }, [boxes]);
+  const removeBox = (boxId) => {
+    setLocalBoxes(prev => prev.filter(box => box.box_id !== boxId));
+
+    // optionally notify parent
+    onChange(deliveryId, `remove_box_${boxId}`, true);
+  };
 
   const handleChange = (boxId, field, value) => {
     const compositeField = `box_${boxId}_${field}`;
@@ -27,16 +30,13 @@ const BoxBreakdown = ({
     const count = Math.max(1, Number(addCount));
 
     const newBoxes = Array.from({ length: count }).map((_, i) => ({
-      box_id: Date.now() + i,
+      box_id: Date.now().toString() + i,
       barcode: "",
       status: "NONE",
     }));
 
-    setLocalBoxes(prev => [...prev, ...newBoxes]);
-
     newBoxes.forEach(box => {
-      handleChange(box.box_id, "barcode", box.barcode);
-      handleChange(box.box_id, "status", box.status);
+      onChange(deliveryId, `box_${box.box_id}_init`, box);
     });
   };
 
@@ -96,7 +96,19 @@ const BoxBreakdown = ({
             key={box.box_id}
             className="grid grid-cols-[11px_170px_150px] gap-2 items-center"
           >
-            <span className="text-xs">{index + 1}</span>
+            <span className="text-xs flex items-center gap-1 group">
+              <span className="group-hover:hidden">{index + 1} </span>
+
+              {editable && (
+                <button
+                  type="button"
+                  className="hidden group-hover:inline text-red-500 text-xs font-bold cursor-pointer"
+                  onClick={() => removeBox(box.box_id)}
+                >
+                  ✕
+                </button>
+              )}
+            </span>
 
             <input
               className="border px-2 py-1 rounded"
@@ -122,7 +134,7 @@ const BoxBreakdown = ({
       </div>
 
 
-      {/* <hr className="my-2" />
+      <hr className="my-2" />
       {editable && (
         <div className="flex gap-2 mb-3 my-2 justify-end items-center">
           <button
@@ -142,7 +154,7 @@ const BoxBreakdown = ({
           />
 
         </div>
-      )} */}
+      )}
     </div>
   );
 };

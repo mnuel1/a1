@@ -59,8 +59,6 @@ export const uploadManifest = async (manifestData) => {
     const { data: insertedDeliveries, error: insertErr } = await supaClient.insert("deliveries", deliveryRows, "*");
     if (insertErr) throw insertErr;
 
-    console.log(insertedDeliveries);
-
     // 2️⃣ Prepare boxes
     const boxRows = [];
 
@@ -329,8 +327,6 @@ export const getRecentManifest = async () => {
       return [];
     }
 
-    console.log(data);
-    
     data.unshift({
       shipment_number: "All",
       container_number: ''
@@ -405,8 +401,6 @@ export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restri
 
     const { data, error, count } = await query;
 
-    console.log(data, count);
-    
     if (error) {
       console.error("Error fetching deliveries:", error);
       return { data: [], totalCount: 0 };
@@ -743,3 +737,7 @@ export const updateShipment = async ({
 export const insertDeliveryBoxes = async (boxes) => {
   return supaClient.insert("delivery_boxes", boxes);
 };
+
+export const updateDeliveryBoxes = async (boxes) => {
+  
+}
