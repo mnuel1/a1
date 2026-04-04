@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { getSettings, getAccessPresets } from "../api/settings";
+import { getSettings, getAccessPresets } from "../pages/Account/api/settings";
 
 const SettingsContext = createContext(null);
 
@@ -10,11 +10,12 @@ export const SettingsProvider = ({ children }) => {
   useEffect(() => {
     let unsubscribe;
 
-    const fetchData = async () => {
+    const fetchData = async () => {    
       // fetch settings with realtime updates
       const res = await getSettings((updated) => {
         setSettings(updated); // realtime updates
       });
+      
       if (res?.data) setSettings(res.data);
       if (res?.unsubscribe) unsubscribe = res.unsubscribe;
 
@@ -29,7 +30,6 @@ export const SettingsProvider = ({ children }) => {
       if (unsubscribe) unsubscribe();
     };
   }, []);
-
   return (
     <SettingsContext.Provider
       value={{

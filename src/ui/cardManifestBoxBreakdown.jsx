@@ -1,51 +1,51 @@
-import { useState, useEffect } from "react";
-import { PlusCircleIcon } from "lucide-react";
+import React, { useState } from "react"
+import { PlusCircleIcon } from "lucide-react"
+
+let tempBoxIdCounter = 1
 
 const BoxBreakdown = ({
   deliveryId,
-  totalBoxes = 0,
-  deliveredBoxes = 0,
   boxes = [],
   statusOptions = [],
   editable,
   onChange,
   isCreate = false
 }) => {
-  const [localBoxes, setLocalBoxes] = useState(boxes);
-  const [addCount, setAddCount] = useState(1);
-
-  const removeBox = (boxId) => {
-    setLocalBoxes(prev => prev.filter(box => box.box_id !== boxId));
-
-    // optionally notify parent
-    onChange(deliveryId, `remove_box_${boxId}`, true);
-  };
+  const [addCount, setAddCount] = useState(1)
 
   const handleChange = (boxId, field, value) => {
-    const compositeField = `box_${boxId}_${field}`;
-    onChange(deliveryId, compositeField, value);
-  };
+    const updatedBoxes = boxes.map(b =>
+      b.box_id === boxId ? { ...b, [field]: value } : b
+    )
+    onChange("delivery_boxes", updatedBoxes)
+  }
+
+  const removeBox = (boxId) => {
+    const updatedBoxes = boxes.filter(b => b.box_id !== boxId)
+    onChange("delivery_boxes", updatedBoxes)
+  }
 
   const addBoxes = () => {
-    const count = Math.max(1, Number(addCount));
-
-    const newBoxes = Array.from({ length: count }).map((_, i) => ({
-      box_id: Date.now().toString() + i,
+    const newBoxes = Array.from({ length: addCount }, () => ({
       barcode: "",
       status: "NONE",
-    }));
+      delivery_id: deliveryId,
+      box_id: `temp-${tempBoxIdCounter++}`
+    }))
+    onChange("delivery_boxes", [...boxes, ...newBoxes])
+  }
 
-    newBoxes.forEach(box => {
-      onChange(deliveryId, `box_${box.box_id}_init`, box);
-    });
-  };
+  const handleSetAllStatus = (value) => {
+    if (!value) return
+    const updatedBoxes = boxes.map(b => ({ ...b, status: value }))
+    onChange("delivery_boxes", updatedBoxes)
+  }
 
   return (
     <div className="border-l border-gray-200 px-4 py-2">
-      {/* SUMMARY */}
       <div className="flex justify-between text-sm mb-4">
-        <span>Total Boxes: <strong>{totalBoxes}</strong></span>
-        <span>Delivered: <strong>{deliveredBoxes}</strong></span>
+        <span>Total Boxes: <strong>{boxes.length}</strong></span>
+        <span>Delivered: <strong>{boxes.filter(b => b.status === "DELIVERED").length}</strong></span>
       </div>
 
       {editable && (
@@ -54,51 +54,27 @@ const BoxBreakdown = ({
           <select
             className="border px-2 py-1 rounded w-full"
             defaultValue=""
-            onChange={(e) => {
-              const value = e.target.value;
-              if (!value) return;
-
-              setLocalBoxes(prev =>
-                prev.map(box => ({
-                  ...box,
-                  status: value,
-                }))
-              )
-
-              localBoxes.forEach(box => {
-                handleChange(box.box_id, "status", value);
-              });
-            }}
+            onChange={(e) => handleSetAllStatus(e.target.value)}
           >
             <option value="">Set all status</option>
             {statusOptions.map(s => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
       )}
 
-
-      {/* HEADER */}
-      <div className="grid grid-cols-[11px_170px_150px] gap-2 text-xs font-semibold mb-2">
+      <div className="grid grid-cols-[auto_minmax(70px,1fr)_minmax(150px,2fr)] gap-2 text-xs font-semibold mb-2">
+        {/* HEADER */}
         <span></span>
         <strong>Barcode No.</strong>
         <strong>Status</strong>
-      </div>
 
-      {/* ROWS */}
-      <div className="space-y-2 overflow-y-auto max-h-[260px] ">
-
-        {localBoxes.map((box, index) => (
-          <div
-            key={box.box_id}
-            className="grid grid-cols-[11px_170px_150px] gap-2 items-center"
-          >
+        {/* ROWS */}
+        {boxes.map((box, index) => (
+          <React.Fragment key={box.box_id ?? `new-${index}`}>
             <span className="text-xs flex items-center gap-1 group">
-              <span className="group-hover:hidden">{index + 1} </span>
-
+              <span className="group-hover:hidden">{index + 1}</span>
               {editable && (
                 <button
                   type="button"
@@ -111,31 +87,27 @@ const BoxBreakdown = ({
             </span>
 
             <input
-              className="border px-2 py-1 rounded"
+              className="border px-2 py-1 rounded w-full box-border"
               value={box.barcode}
               disabled={!editable}
               onChange={(e) => editable && handleChange(box.box_id, "barcode", e.target.value)}
             />
 
             <select
-              className="border px-2 py-1 rounded"
+              className="border px-2 py-1 rounded w-full box-border"
               value={box.status}
               disabled={!editable}
               onChange={(e) => editable && handleChange(box.box_id, "status", e.target.value)}
             >
               {statusOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
-          </div>
+          </React.Fragment>
         ))}
       </div>
 
-
-      <hr className="my-2" />
-      {/* {editable && (
+      {editable && (
         <div className="flex gap-2 mb-3 my-2 justify-end items-center">
           <button
             type="button"
@@ -144,19 +116,17 @@ const BoxBreakdown = ({
           >
             <PlusCircleIcon />
           </button>
-
           <input
             type="number"
             min={1}
             className="border px-2 py-1 rounded w-20"
             value={addCount}
-            onChange={(e) => setAddCount(e.target.value)}
+            onChange={(e) => setAddCount(Number(e.target.value))}
           />
-
         </div>
-      )} */}
+      )}
     </div>
-  );
-};
+  )
+}
 
-export default BoxBreakdown;
+export default BoxBreakdown

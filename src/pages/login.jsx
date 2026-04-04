@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import toast from "react-hot-toast";
-
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import { useToast } from "../context/useToast";
 import { useLoading } from "../context/useLoading";
 import { useAuth } from "../context/useAuth";
 
@@ -13,6 +13,7 @@ const Login = () => {
   const [loginID, setLoginID] = useState("");
   const [password, setPassword] = useState("");
   const { loading, setLoading } = useLoading();
+  const toast = useToast();
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -21,7 +22,7 @@ const Login = () => {
     setLoading(true);
 
     if (!loginID || !password) {
-      toast.error("Please provide both login ID and password.");
+      toast.error("You can't login", "Please provide both login ID and password.");
       setLoading(false);
       return;
     }
@@ -30,11 +31,11 @@ const Login = () => {
       const user = await loginWithCredentials(login, loginID, password);
       
       if (user) {
-        toast.success("Login Success!");
+        toast.success("Login Success", "Welcome back!");
         navigate("/a1/manifest");
       }
     } catch (error) {
-      toast.error(`Login failed: ${error.message}`);
+      toast.error(`Login failed!`, `${error.message}`);
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { uploadManifest, updateDeliveryBoxesByExcel } from "../api/manifest";
+import { uploadManifest, updateDeliveryBoxesByExcel, compareExcelWithDB } from "../api/manifest";
 import { ALLOWED_DELIMITERS_REGEX, splitBarcodes } from "./helper";
 
 export const getSheetNames = (file) => {
@@ -43,7 +43,7 @@ export const readSheet = (file, sheetName) => {
 };
 
 const buildDeliveryBoxes = (row, rowIndex) => {
-  const  rawBarcodes = String(row["BARCODE NO."]).trim();
+  const rawBarcodes = String(row["BARCODE NO."]).trim();
   const expectedQty = Number(row["NO. OF BOXES"]);
 
   if (!rawBarcodes) {
@@ -92,7 +92,7 @@ export const processSheet = async (
   file,
   selectedSheet,
   overrides = {},
-  mode = "insert",
+  mode = "insert", // "insert" | "reconcile" | "compare"
   showModal,
   toast
 ) => {
@@ -156,6 +156,12 @@ export const processSheet = async (
       } else if (mode === "reconcile") {
         // Reconciliation mode
         result = await updateDeliveryBoxesByExcel(payload.manifestData, shipmentNo, showModal, toast);
+      } else if (mode === "compare") {
+        // Compare Excel with DB
+        const comparison = await compareExcelWithDB(structuredManifest, shipmentNo);
+        return { data: comparison, success: true };
+      } else {
+        throw new Error(`Something went wrong!.`);
       }
 
       if (!result.success) throw new Error("Something went wrong.");

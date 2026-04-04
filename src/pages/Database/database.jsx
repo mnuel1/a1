@@ -1,6 +1,6 @@
-import ManifestTable from "../ui/table";
+import ManifestTable from "./ui/manifestTable";
 
-const Database = () => {  
+const DatabasePage = () => {  
   return (
     <div className="flex h-full w-full">
       <div className="relative flex h-full w-full flex-col p-6">
@@ -15,4 +15,4 @@ const Database = () => {
   );
 };
 
-export default Database;
+export default DatabasePage;

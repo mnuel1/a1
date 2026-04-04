@@ -15,10 +15,10 @@ export const loginWithCredentials = async (login, loginID, password) => {
       throw new Error("Account doesn't exist");
     }
 
-    // const isPasswordValid = await bcrypt.compare(password, data.password);
-    // if (!isPasswordValid) {
-    //   throw new Error("Incorrect password");
-    // }
+    const isPasswordValid = await bcrypt.compare(password, data.password);
+    if (!isPasswordValid) {
+      throw new Error("Incorrect password");
+    }
 
     setGetCurrentUser(() => data);
 
@@ -26,7 +26,6 @@ export const loginWithCredentials = async (login, loginID, password) => {
     return data;
   } catch (error) {
     console.log(error);
-
     throw new Error(error.message);
   }
 };
@@ -58,8 +57,9 @@ export const validateSessionTokenInDb = async (sessionId) => {
       .single();
 
     if (error || !session) return { session: null, user: null };
-
+    
     const expired = Date.now() >= new Date(session.expires_at).getTime();
+    
     if (expired) {
       await supabase
         .from('session')

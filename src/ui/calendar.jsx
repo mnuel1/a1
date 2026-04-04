@@ -3,14 +3,17 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
-import toast from "react-hot-toast";
+
+import { useToast } from "../context/useToast";
 import { useLoading } from "../context/useLoading";
+
 import { addSchedule, getSchedules } from "../api/schedule";
 
 const ScheduleCalendar = () => {
   const [schedules, setSchedules] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const { setLoading } = useLoading();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     date: "",
     title: "",

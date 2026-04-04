@@ -4,10 +4,10 @@ import { CardInput } from "./input";
 
 const CardManifest = ({
   settings,
-  deliveries,
+  manifestData,
   handleFieldChange,
   handleSubmit,
-  status,
+  deliveryStatusOptions,
   canEdit = false,
   isReadOnly = false,
   boxBreakdownShow = true,
@@ -15,6 +15,9 @@ const CardManifest = ({
   isModalView = false,
   modalClose
 }) => {
+  const item = manifestData;
+
+  if (!item) return null;
   const CARD_FLAG = DISPLAYFLAG.CARD;
   const editable = canEdit && !isReadOnly;
 
@@ -33,111 +36,108 @@ const CardManifest = ({
     return acc;
   }, {});
 
+
+
+  const boxes = item.delivery?.boxes ?? [];
+  const totalBoxes = boxes.length;
+  const deliveredBoxes = boxes.filter((b) => b.status === "DELIVERED").length;
+
   return (
     <div className="space-y-8">
-      {deliveries.map((item) => {
-        const boxes = item.delivery_boxes ?? [];
-        const totalBoxes = boxes.length;
-        const deliveredBoxes = boxes.filter((b) => b.status === "DELIVERED")
-          .length;
+      <div
+        key={item.delivery?.delivery_id}
+        className={`${!isModalView ? 'border  rounded-lg p-6 shadow-sm ' : ''} bg-white max-w-8xl mx-auto text-sm`}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
 
-        return (
-          <div
-            key={item.delivery_id}
-            className={`${!isModalView ? 'border  rounded-lg p-6 shadow-sm ' : ''} bg-white max-w-8xl mx-auto text-sm`}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-4">
+            {Object.keys(rows).map((rowKey, index) => {
+              const fields = rows[rowKey];
+              const colCount = fields.length;
+              const isFirstRow = index === 0;
 
-                {Object.keys(rows).map((rowKey, index) => {
-                  const fields = rows[rowKey];
-                  const colCount = fields.length;
-                  const isFirstRow = index === 0;
-
-                  return (
-                    <div key={rowKey} className="space-y-4">
-                      <div
-                        className={
-                          isFirstRow
-                            ? "flex flex-wrap gap-4 items-start"
-                            : "grid gap-4 items-start"
+              return (
+                <div key={rowKey} className="space-y-4">
+                  <div
+                    className={
+                      isFirstRow
+                        ? "flex flex-wrap gap-4 items-start"
+                        : "grid gap-4 items-start"
+                    }
+                    style={
+                      isFirstRow
+                        ? undefined
+                        : {
+                          gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`,
                         }
-                        style={
-                          isFirstRow
-                            ? undefined
-                            : {
-                              gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))`,
-                            }
-                        }
-                      >
-                        {fields.map((f) => {
-                          let value = item[f.cardKey] ?? "";
+                    }
+                  >
+                    {fields.map((f) => {
+                      let value = item.delivery?.[f.cardKey] ?? "";
 
-                          if (f.cardKey === "shipment_number")
-                            value = isCreate ? item.shipment_number ?? "" : item.shipments?.shipment_number ?? "";
+                      if (f.cardKey === "shipment_number")
+                        value = item.shipment?.shipment_number ?? "";
 
-                          if (f.cardKey === "container_number")
-                            value = isCreate ? item.shipment_number ?? "" : item.shipments?.container_number ?? "";
+                      if (f.cardKey === "container_number")
+                        value = item.shipment?.container_number ?? "";
 
-                          return (
-                            <CardInput
-                              key={f.cardKey}
-                              type={f.cardKey === 'tracking_number' && isCreate ? 'inline-text' : f.type}
-                              keyName={f.cardKey}
-                              label={f.label}
-                              value={value}
-                              values={f.values}
-                              parentid={item.delivery_id}
-                              editable={editable}
-                              handleFieldChange={handleFieldChange}
-                            />
-                          );
-                        })}
-                      </div>
+                      return (
+                        <CardInput
+                          key={f.cardKey}
+                          type={f.cardKey === 'tracking_number' && isCreate ? 'inline-text' : f.type}
+                          keyName={f.cardKey}
+                          label={f.label}
+                          value={value}
+                          values={f.values}
+                          parentid={item.delivery?.delivery_id}
+                          editable={editable}
+                          handleFieldChange={handleFieldChange}
+                        />
+                      );
+                    })}
+                  </div>
 
-                      {/* Divider after first row */}
-                      {isFirstRow && <hr className="border-gray-300" />}
-                    </div>
-                  );
-                })}
+                  {isFirstRow && <hr className="border-gray-300" />}
+                </div>
+              );
+            })}
 
-              </div>
-              {/* Box Breakdown */}
-              {boxBreakdownShow && (
-                <BoxBreakdown
-                  deliveryId={item.delivery_id}
-                  boxes={boxes}
-                  totalBoxes={totalBoxes}
-                  deliveredBoxes={deliveredBoxes}
-                  statusOptions={status}
-                  editable={editable}
-                  onChange={handleFieldChange}
-                  isCreate={isCreate}
-                />
-              )}
-            </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={handleSubmit}
-                disabled={!editable}
-                className={`cursor-pointer w-full px-4 py-2 rounded-lg mt-4 text-xl text-white ${editable
-                  ? "bg-primary hover:bg-primary-60"
-                  : "bg-gray-400 cursor-not-allowed"
-                  }`}
-              >
-                {isCreate ? "Submit" : "Update"}
-              </button>
-              <button
-                onClick={modalClose}
-                className={`cursor-pointer w-full px-4 py-2 rounded-lg mt-4 text-xl text-black border-primary border-2 hover:text-primary`}
-              >
-                Cancel
-              </button>
-            </div>
           </div>
-        );
-      })}
+
+          {boxBreakdownShow && (
+            <BoxBreakdown
+              deliveryId={item.delivery?.delivery_id}
+              boxes={boxes}
+              totalBoxes={totalBoxes}
+              deliveredBoxes={deliveredBoxes}
+              statusOptions={deliveryStatusOptions}
+              editable={editable}
+              onChange={handleFieldChange}
+              isCreate={isCreate}
+            />
+          )}
+        </div>
+
+        <div className="flex gap-4">
+          <button
+            onClick={handleSubmit}
+            disabled={!editable}
+            className={`cursor-pointer w-full px-4 py-2 rounded-lg mt-4 text-xl text-white ${editable
+              ? "bg-primary hover:bg-primary-60"
+              : "bg-gray-400 cursor-not-allowed"
+              }`}
+          >
+            {isCreate ? "Submit" : "Update"}
+          </button>
+
+          <button
+            onClick={modalClose}
+            className="cursor-pointer w-full px-4 py-2 rounded-lg mt-4 text-xl text-black border-primary border-2 hover:text-primary"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

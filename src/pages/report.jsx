@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { PieChart, SimpleBarChart } from "@carbon/charts-react";
-import toast from "react-hot-toast";
 import "@carbon/charts/styles.css";
 
 import { Shipments } from "../ui/filters";
@@ -11,6 +10,7 @@ import pieOption from "../utils/pieOption";
 
 import { getAnalytics } from "../api/reports";
 
+import { useToast } from "../context/useToast";
 import { useLoading } from "../context/useLoading";
 import { useStatusShipment } from "../context/useStatusShipment";
 import { useModal } from "../context/useModal";
@@ -228,6 +228,7 @@ const Report = () => {
   const { setLoading } = useLoading();
   const { shipmentNumber, shipmentNumbers, setShipmentNumber, statusOptions } = useStatusShipment();
   const { showModal } = useModal();
+  const toast = useToast();
 
   const [pieData, setPieData] = useState(data);
   const [totalBoxes, setTotalBoxes] = useState([]);

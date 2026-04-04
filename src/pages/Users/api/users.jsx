@@ -1,6 +1,6 @@
-import { supabase } from "../supabaseClient";
+import { supabase, supaClient } from "../../../supabaseClient";
 
-export const fetchStaffs = async () => {
+export const getUsers = async () => {
   try {
     const { data, error } = await supabase
       .from("user")
@@ -20,7 +20,7 @@ export const fetchStaffs = async () => {
   }
 };
 
-export const addStaff = async (staff) => {
+export const addUser = async (staff) => {
   try {
     const { data, error } = await supaClient.insert("user", staff);
 
@@ -28,14 +28,16 @@ export const addStaff = async (staff) => {
 
     return { success: true, data };
   } catch (err) {
-    throw new Error(err.message || "Failed to add staff");
+    throw new Error(err.message || "Something went wrong. Please try again later.");
   }
 };
 
-export const updateStaffInfo = async (staff) => {
+export const updateUserInfo = async (user) => {
   try {
-    const { id, ...updateFields } = staff;
-    if (!id) throw new Error("Staff ID is required");
+    console.log(user);
+    
+    const { id, ...updateFields } = user;
+    if (!id) throw new Error("Something went wrong. Please try again later.");
 
     const { data, error } = await supaClient.update("user", { id }, updateFields);
 
@@ -43,13 +45,13 @@ export const updateStaffInfo = async (staff) => {
 
     return { success: true, data };
   } catch (err) {
-    throw new Error(err.message || "Failed to update staff info");
+    throw new Error(err.message || "Something went wrong. Please try again later.");
   }
 };
 
-export const updateStatusStaff = async ({ id, status }) => {
+export const updateUserStatus = async ({ id, status }) => {
   try {
-    if (!id) throw new Error("Staff ID is required");
+    if (!id) throw new Error("Something went wrong. Please try again later.");
 
     const { data, error } = await supaClient.update("user", { id }, { status });
 
@@ -57,6 +59,6 @@ export const updateStatusStaff = async ({ id, status }) => {
 
     return { success: true, data };
   } catch (err) {
-    throw new Error(err.message || "Failed to update staff status");
+    throw new Error(err.message || "Something went wrong. Please try again later.");
   }
 };

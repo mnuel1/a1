@@ -21,7 +21,6 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-
 select {
     appearance: none;
     border: .5px solid black;

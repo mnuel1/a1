@@ -1,0 +1,36 @@
+create or replace function update_delivery_boxes(updated_fields jsonb)
+returns setof delivery_boxes as $$
+declare
+    box jsonb;
+    inserted_box delivery_boxes%rowtype;
+begin
+    -- Delete old boxes for the first delivery_id in the array
+    delete from delivery_boxes
+    where delivery_id = (updated_fields->0->>'delivery_id')::int;
+
+    -- Insert each box
+    for box in select * from jsonb_array_elements(updated_fields)
+    loop
+        if box ? 'box_id' and box->>'box_id' not like 'temp%' then
+            insert into delivery_boxes (delivery_id, barcode, status, box_id)
+            values (
+                (box->>'delivery_id')::int,
+                box->>'barcode',
+                box->>'status',
+                (box->>'box_id')::int
+            )
+            returning * into inserted_box;
+        else
+            insert into delivery_boxes (delivery_id, barcode, status)
+            values (
+                (box->>'delivery_id')::int,
+                box->>'barcode',
+                box->>'status'
+            )
+            returning * into inserted_box;
+        end if;
+
+        return next inserted_box;
+    end loop;
+end;
+$$ language plpgsql;

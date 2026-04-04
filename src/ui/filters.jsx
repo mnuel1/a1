@@ -111,7 +111,12 @@ export const Shipments = ({
   );
 };
 
-export const SearchBar = ({ label = "Search", value = "", placeholder = "Search...", onChange, handleOnKeyDown }) => {
+export const SearchBar = ({
+  label = "Search",
+  value = "",
+  placeholder = "Search...",
+  onChange,
+  handleOnKeyDown }) => {
   const [query, setQuery] = useState(value || "");
 
   useEffect(() => {
@@ -125,46 +130,39 @@ export const SearchBar = ({ label = "Search", value = "", placeholder = "Search.
   };
 
   return (
-    label ? (
-      <LabeledField label={label} show={label.trim() !== ""}>
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={query}
-          onChange={handleChange}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (handleOnKeyDown) handleOnKeyDown()
-            }
-          }}
-          className="text-md w-full rounded-lg border px-2 py-1 focus:ring-red-300 focus:outline-none"
-        />
-      </LabeledField>
-    )
-      : (
-        <div
-          className="focus-within:ring-primary mb-4 flex w-full items-center
-                    space-x-1 rounded-lg border border-gray-300 px-2 py-1 focus-within:ring-2"
-        >
-          <Search className="text-gray-500 h-5 w-5" />
+    <>
+      {label ? (
+        <LabeledField label={label} show={label.trim() !== ""}>
           <input
             type="text"
             placeholder={placeholder}
             value={query}
             onChange={handleChange}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                if (handleOnKeyDown) handleOnKeyDown()
-              }
+              handleOnKeyDown?.(e) // forward event to parent
             }}
-
-            className="ml-2 w-full focus:outline-none text-lg py-2"
+            className="text-md w-full rounded-lg border px-2 py-1 focus:ring-red-300 focus:outline-none"
           />
-        </div>
-
+        </LabeledField>
       )
+        : (
+          <div
+            className="focus-within:ring-primary mb-2 flex w-full items-center
+                    space-x-1 rounded-lg border border-gray-300 px-2 py-1 focus-within:ring-2"
+          >
+            <Search className="text-gray-500 h-5 w-5" />
+            <input
+              type="text"
+              placeholder={placeholder}
+              value={query}
+              onChange={handleChange}
+              onKeyDown={(e) => handleOnKeyDown?.(e)}
 
+              className="ml-2 w-full focus:outline-none text-lg py-2"
+            />
+          </div>
+
+        )}
+    </>
   );
 };

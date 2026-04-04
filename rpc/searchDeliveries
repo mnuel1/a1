@@ -1,59 +1,109 @@
+-- Drop the function if it exists
+drop function if exists public.search_deliveries(text, text[], text[]);
+
+-- Create or replace function
 create or replace function public.search_deliveries(
   query text,
   regions text[] default null,
   cities text[] default null
 )
-returns table (
-  delivery_id int,
-  shipment_id int,
-  tracking_number text,
-  agent text,
-  shipper_name text,
-  shipper_ctc text,
-  consignee text,
-  consignee_address text,
-  consignee_ctc text,
-  destination text,
-  city text,
-  qty int,
-  shipments jsonb,
-  delivery_boxes jsonb
-) as $$
+returns setof jsonb as $$
+declare
+  shipment_num text;
+  tracking_num text;
 begin
-  return query
-    select
-      d.delivery_id,
-      d.shipment_id,
-      d.tracking_number,
-      d.agent,
-      d.shipper_name,
-      d.shipper_ctc,
-      d.consignee,
-      d.consignee_address,
-      d.consignee_ctc,
-      d.destination,
-      d.city,
-      d.qty,
-      to_jsonb(s.*) as shipments,
-      coalesce(jsonb_agg(to_jsonb(b) order by b.box_id) filter (where b.box_id is not null), '[]'::jsonb) as delivery_boxes
-    from deliveries d
-    left join shipments s on s.shipment_id = d.shipment_id
-    left join delivery_boxes b on b.delivery_id = d.delivery_id
-    where (
-      d.shipper_name ilike '%' || query || '%'
-      or d.tracking_number ilike '%' || query || '%'
-      or d.consignee ilike '%' || query || '%'
-      or b.barcode ilike '%' || query || '%'
-    )
-    and (regions is null or upper(d.destination) = any(regions))
-    and (
-      cities is null
-      or exists (
-        select 1 from unnest(cities) c
-        where lower(d.city) like '%' || replace(c, ' city', '') || '%'
+  -- Check if query matches "shipment_number - tracking_number" pattern
+  if query ~ '^\s*\d+\s*-\s*\d+' then
+    shipment_num := split_part(query, '-', 1)::text;
+    tracking_num := split_part(query, '-', 2)::text;
+
+    return query
+      select jsonb_build_object(
+        'shipment', jsonb_build_object(
+            'shipment_number', s.shipment_number,
+            'container_number', s.container_number
+        ),
+        'delivery', jsonb_build_object(
+            'delivery_id', d.delivery_id,
+            'tracking_number', d.tracking_number,
+            'agent', d.agent,
+            'shipper_name', d.shipper_name,
+            'shipper_ctc', d.shipper_ctc,
+            'consignee', d.consignee,
+            'consignee_address', d.consignee_address,
+            'consignee_ctc', d.consignee_ctc,
+            'destination', d.destination,
+            'city', d.city,
+            'qty', d.qty,
+            'date_out_for_delivery', d.date_out_for_delivery,
+            'date_received', d.date_received,
+            'received_by', d.received_by,
+            'boxes', coalesce(jsonb_agg(to_jsonb(b.*) order by b.box_id) filter (where b.box_id is not null), '[]'::jsonb)
+        )
       )
-    )
-    group by d.delivery_id, s.shipment_id;
+      from deliveries d
+      left join shipments s on s.shipment_id = d.shipment_id
+      left join delivery_boxes b on b.delivery_id = d.delivery_id
+      where s.shipment_number::text ilike '%' || shipment_num || '%'
+        and d.tracking_number::text ilike '%' || tracking_num || '%'
+        and (regions is null or upper(d.destination) = any(regions))
+        and (
+          cities is null
+          or exists (
+            select 1 from unnest(cities) c
+            where lower(d.city) like '%' || replace(c, ' city', '') || '%'
+          )
+        )
+      group by d.delivery_id, s.shipment_id
+      order by d.delivery_id
+      limit 10;
+
+  else
+    -- Default search
+    return query
+      select jsonb_build_object(
+        'shipment', jsonb_build_object(
+            'shipment_number', s.shipment_number,
+            'container_number', s.container_number
+        ),
+        'delivery', jsonb_build_object(
+            'delivery_id', d.delivery_id,
+            'tracking_number', d.tracking_number,
+            'agent', d.agent,
+            'shipper_name', d.shipper_name,
+            'shipper_ctc', d.shipper_ctc,
+            'consignee', d.consignee,
+            'consignee_address', d.consignee_address,
+            'consignee_ctc', d.consignee_ctc,
+            'destination', d.destination,
+            'city', d.city,
+            'qty', d.qty,
+            'date_out_for_delivery', d.date_out_for_delivery,
+            'date_received', d.date_received,
+            'received_by', d.received_by,
+            'boxes', coalesce(jsonb_agg(to_jsonb(b.*) order by b.box_id) filter (where b.box_id is not null), '[]'::jsonb)
+        )
+      )
+      from deliveries d
+      left join shipments s on s.shipment_id = d.shipment_id
+      left join delivery_boxes b on b.delivery_id = d.delivery_id
+      where (
+        d.shipper_name ilike '%' || query || '%'
+        or d.tracking_number ilike '%' || query || '%'
+        or d.consignee ilike '%' || query || '%'
+        or b.barcode ilike '%' || query || '%'
+      )
+      and (regions is null or upper(d.destination) = any(regions))
+      and (
+        cities is null
+        or exists (
+          select 1 from unnest(cities) c
+          where lower(d.city) like '%' || replace(c, ' city', '') || '%'
+        )
+      )
+      group by d.delivery_id, s.shipment_id
+      order by d.delivery_id
+      limit 10;
+  end if;
 end;
 $$ language plpgsql stable;
-    

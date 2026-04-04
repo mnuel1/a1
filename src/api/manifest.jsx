@@ -315,6 +315,93 @@ export const updateDeliveryBoxesByExcel = async (rows, shipmentNo, showModal, to
   }
 };
 
+export const compareExcelWithDB = async (rows, shipmentNo) => {
+  try {
+    if (!rows || rows.length === 0) return { discrepancies: [] };
+
+    // 1. Get deliveries and their boxes for this shipment
+    const trackingNumbers = rows.map(r => r["TRACKING NO."]);
+
+    const { data: deliveries, error } = await supabase
+      .from("deliveries")
+      .select(`
+        delivery_id,
+        tracking_number,
+        delivery_boxes!inner (barcode, status),
+        shipments!inner (shipment_number)
+      `)
+      .in("tracking_number", trackingNumbers)
+      .eq("shipments.shipment_number", shipmentNo);
+
+    if (error) throw error;
+    if (!deliveries || deliveries.length === 0) return { discrepancies: [] };
+
+    const discrepancies = [];
+
+    // 2. Compare Excel boxes with DB boxes
+    const deliveryMap = Object.fromEntries(
+      deliveries.map(d => [d.tracking_number, d.delivery_boxes])
+    );
+
+    for (const row of rows) {
+      const excelBoxes = row.__delivery_boxes || [];
+      const dbBoxes = deliveryMap[row["TRACKING NO."]] || [];
+
+      const minLen = Math.min(excelBoxes.length, dbBoxes.length);
+
+      // Check mismatched barcodes at same index
+      for (let i = 0; i < minLen; i++) {
+        if (excelBoxes[i].barcode !== dbBoxes[i].barcode) {
+          discrepancies.push({
+            type: "barcode_mismatch",
+            "Tracking No.": row["TRACKING NO."],
+            index: i + 1,
+            "DB Barcode": dbBoxes[i].barcode,
+            "Excel Barcode": excelBoxes[i].barcode,
+          });
+        }
+
+        const excelStatus = excelBoxes[i].status?.toUpperCase() || null;
+        const dbStatus = dbBoxes[i].status?.toUpperCase() || null;
+        if (excelStatus && dbStatus !== excelStatus) {
+          discrepancies.push({
+            type: "status_mismatch",
+            "Tracking No.": row["TRACKING NO."],
+            index: i + 1,
+            "DB Status": dbStatus,
+            "Excel Status": excelStatus,
+          });
+        }
+      }
+
+      // Check for extra boxes in Excel
+      if (excelBoxes.length > dbBoxes.length) {
+        discrepancies.push({
+          type: "extra_in_excel",
+          "Tracking No.": row["TRACKING NO."],
+          extraCount: excelBoxes.length - dbBoxes.length,
+          extraBoxes: excelBoxes.slice(dbBoxes.length),
+        });
+      }
+
+      // Check for missing boxes in Excel (DB has more)
+      if (dbBoxes.length > excelBoxes.length) {
+        discrepancies.push({
+          type: "missing_in_excel",
+          "Tracking No.": row["TRACKING NO."],
+          missingCount: dbBoxes.length - excelBoxes.length,
+          missingBoxes: dbBoxes.slice(excelBoxes.length),
+        });
+      }
+    }
+
+    return { discrepancies };
+  } catch (err) {
+    console.error(err);
+    return { discrepancies: [], error: err.message };
+  }
+};
+
 export const getRecentManifest = async () => {
   try {
     const { data, error } = await supabase
@@ -341,403 +428,3 @@ export const getRecentManifest = async () => {
   }
 };
 
-export const getDeliveries = async (filters = {}, page = 1, rowLimit = 5, restrictions = {}) => {
-  try {
-    let query = supabase
-      .from("deliveries")
-      .select(`
-        *, 
-        shipments!inner(*),
-        delivery_boxes!inner (
-          box_id,
-          barcode,
-          status
-        )`, { count: "exact" })
-      .range((page - 1) * rowLimit, page * rowLimit - 1);
-        
-    if (filters.search && filters.search.trim() !== "") {
-      const sanitized = filters.search.replace(/,/g, "");
-      const search = `%${sanitized}%`;
-
-      query = query.or(
-        `tracking_number.ilike.${search},shipper_name.ilike.${search},consignee.ilike.${search}`
-      );
-    }
-
-    if (
-      filters.shipment_number &&
-      filters.shipment_number.toLowerCase() !== "all"
-    ) {
-      query = query.eq("shipments.shipment_number", filters.shipment_number);
-    }
-
-    if (filters.status && filters.status !== "ALL") {
-      query = query.eq("delivery_boxes.status", filters.status);
-    }
-
-
-    if (restrictions.region?.length) {
-      const upperRegions = restrictions.region
-        .filter(r => r && r.trim() !== "")
-        .map(r => r.toUpperCase());
-
-      if (upperRegions.length) {
-        query = query.in("destination", upperRegions);
-      }
-    }
-
-    if (restrictions.city?.length) {
-      const normalizedCities = restrictions.city
-        .filter(c => c && c.trim() !== "")
-        .map(c => c.toLowerCase().replace(" city", "").trim());
-
-      if (normalizedCities.length) {
-        query = query.in(
-          "city",
-          normalizedCities.map(c => c.charAt(0).toUpperCase() + c.slice(1))
-        );
-      }
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error("Error fetching deliveries:", error);
-      return { data: [], totalCount: 0 };
-    }
-
-    return { data, totalCount: count || 0 };
-  } catch (error) {
-    console.error("Unexpected error:", error.message);
-    return { data: [], totalCount: 0 };
-  }
-};
-
-export const searchDeliveries = async (query) => {
-  try {
-    if (!query?.trim()) throw new Error("Search query cannot be empty");
-
-    const { data, error } = await supabase.rpc("search_deliveries", { query });
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      return { searchResult: [], searchFound: false };
-    }
-
-    const match = data[0];
-
-    // simulate your "related matches" logic
-    const relatedMatches = data.filter(d => d.delivery_id !== match.delivery_id);
-
-    const results = [match, ...relatedMatches];
-
-    return {
-      searchResult: results,
-      searchFound: results.length > 0,
-    };
-  } catch (error) {
-    console.error(error);
-    return { searchResult: [], searchFound: false };
-  }
-};
-
-export const createDelivery = async (formData) => {
-  try {
-    const shipmentNumber = formData.shipment_number;
-    const containerNumber = formData.container_number;
-    const totalBoxes = parseInt(formData.total_boxes);
-
-    const deliveryData = {
-      tracking_number: formData.tracking_number,
-      qty: parseInt(formData.qty),
-      barcode_no: formData.barcode_no,
-      agent: formData.agent,
-      shipper_name: formData.shipper_name,
-      shipper_ctc: formData.shipper_ctc,
-      consignee: formData.consignee,
-      consignee_address: formData.consignee_address,
-      consignee_ctc: formData.consignee_ctc,
-      destination: formData.destination,
-      status: formData.status || null,
-      date_out_for_delivery: formData.date_out_for_delivery || null,
-      date_received: formData.date_received || null,
-    };
-
-    // Check if shipment exists
-    const { data: existingShipment } = await supabase
-      .from("shipments")
-      .select("shipment_id")
-      .or(
-        `shipment_number.eq.${shipmentNumber},container_number.eq.${containerNumber}`
-      )
-      .limit(1)
-      .single();
-
-    let shipmentId = existingShipment?.shipment_id;
-
-    if (!shipmentId) {
-      const { data: newShipment } = await supaClient.insert(
-        "shipments",
-        {
-          shipment_number: shipmentNumber,
-          container_number: containerNumber,
-          total_boxes: totalBoxes,
-        },
-        "shipment_id",
-        true
-      );
-
-      shipmentId = newShipment.shipment_id;
-    }
-
-    await supaClient.insert("deliveries", {
-      ...deliveryData,
-      shipment_id: shipmentId,
-    });
-
-    return { success: "Delivery created successfully" };
-  } catch (error) {
-    console.error(error);
-    return { error: error.message };
-  }
-};
-
-export const updateDelivery = async (deliveryId, updatedFields) => {
-  try {
-    if (deliveryId === "delivery_boxes") {
-      for (const updatedBox of updatedFields) {
-        const { box_id, barcode, status } = updatedBox;
-
-        const updatePayload = { box_id };
-        if (barcode !== undefined && barcode !== null) updatePayload.barcode = barcode;
-        if (status !== undefined && status !== null) updatePayload.status = status;
-
-        const { data: boxData, error: boxError } = await supaClient.update(
-          "delivery_boxes",
-          { box_id: box_id },
-          updatePayload,
-          "*"
-        )
-
-        if (boxError) {
-          console.error("Error updating box:", boxError);
-        } else {
-          console.log("Updated box:", boxData);
-        }
-      }
-      return { success: true, message: `${deliveryId} updated successfully` };
-    }
-
-    console.log(updatedFields);
-
-    const { data, error } = await supaClient.update(
-      "deliveries",
-      { delivery_id: deliveryId },
-      updatedFields,
-      "*"
-    );
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) {
-      return { error: true, message: `${deliveryId} not found` };
-    }
-
-    return { success: true, message: `${deliveryId} updated successfully` };
-  } catch (error) {
-    console.error(error);
-    return { error: error.message };
-  }
-};
-
-export const exportToExcel = async (shipmentNumber, columns) => {
-  try {
-    const { data, error } = await supabase
-      .from("deliveries")
-      .select(`*, 
-        shipments!inner(
-          shipment_no:shipment_number,
-          container_no:container_number,
-          created_at,
-          total_boxes
-        ),
-        delivery_boxes!inner(
-          box_id,
-          barcode,
-          status
-        )
-      `, { count: "exact" })
-      .eq("shipments.shipment_number", shipmentNumber);
-
-    if (error) throw error;
-
-    if (!data) throw new Error("No delivery data found.");
-
-    const wb = XLSX.utils.book_new();
-    const wbBarcode = XLSX.utils.book_new();
-
-    const regionMap = {
-      LUZON: "Luzon",
-      VISAYAS: "Visayas",
-      NCR: "NCR",
-      MINDANAO: "Mindanao",
-    };
-
-    const cities = {};
-    const regionSummary = {};
-    const allRegionSummaryRows = [];
-
-    data.forEach((item) => {
-      const region = regionMap[item.destination] || "Other";
-
-      let sheetKey = item.city?.trim().toLowerCase() || "Unknown";
-      sheetKey = sheetKey.replace(/\s*city$/, "");
-      sheetKey = sheetKey.charAt(0).toUpperCase() + sheetKey.slice(1);
-
-      if (!cities[sheetKey]) cities[sheetKey] = [];
-      cities[sheetKey].push(item);
-
-      if (!regionSummary[region]) regionSummary[region] = {};
-      if (!regionSummary[region][sheetKey]) {
-        regionSummary[region][sheetKey] = {
-          Boxes: 0,
-          Delivered: 0,
-        };
-      }
-
-      const boxes = item.delivery_boxes?.length || 0;
-      const delivered = item.delivery_boxes?.filter(
-        (b) => b.status === "DELIVERED"
-      ).length || 0;
-
-      regionSummary[region][sheetKey].Boxes += boxes;
-      regionSummary[region][sheetKey].Delivered += delivered;
-    });
-
-    let grandTotal = { Region: "Grand Total", Boxes: 0, Delivered: 0 };
-    Object.entries(regionSummary).forEach(([region, regionData]) => {
-      allRegionSummaryRows.push([{ Region: region }]);
-      const rows = Object.entries(regionData).map(([place, summary]) => ({
-        Region: "",
-        Province: place,
-        ...summary,
-      }));
-
-      const total = rows.reduce(
-        (acc, row) => {
-          acc.Boxes += row.Boxes;
-          acc.Delivered += row.Delivered;
-          return acc;
-        },
-        { Region: "", Province: "Subtotal", Boxes: 0, Delivered: 0 }
-      );
-
-      rows.push(total);
-
-      grandTotal.Boxes += total.Boxes;
-      grandTotal.Delivered += total.Delivered;
-      allRegionSummaryRows.push(...rows, [{}]);
-    });
-
-    allRegionSummaryRows.push([grandTotal]);
-
-    const flattenedSummary = allRegionSummaryRows.flat();
-    const wsSummary = XLSX.utils.json_to_sheet(flattenedSummary);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-
-    const scannableColumns = columns.filter((col) => col.displayFlags.scannable);
-    const barcodeRows = data.flatMap((r) => {
-      const scannableValues = scannableColumns.map((col) => {
-        let value = r[col.key] || r[col.key] !== undefined ? r[col.key] : r.shipments?.[col.key];
-        return value ?? "";
-      });
-
-      return Array.from({ length: r.qty || 1 }, () => ({
-        DATA: scannableValues.join("\t"),
-        BARCODE: r.barcode_no || "",
-      }));
-    });
-
-    const wsBarcodes = XLSX.utils.json_to_sheet(barcodeRows);
-    XLSX.utils.book_append_sheet(wbBarcode, wsBarcodes, "Barcodes");
-
-    const getRowValue = (row, col) => {
-      if (row[col.key] !== undefined) return row[col.key];
-      if (row.shipments && col.key in row.shipments) return row.shipments[col.key];
-      return "";
-    };
-
-    Object.entries(cities).forEach(([sheetName, rows]) => {
-      const printableColumns = columns.filter((col) => col.displayFlags.printable);
-
-      const formattedRows = rows.map((r) => {
-        const rowObj = {};
-        printableColumns.forEach((col) => {
-          rowObj[col.label.toUpperCase()] = getRowValue(r, col);
-        });
-        return rowObj;
-      });
-
-      const ws = XLSX.utils.json_to_sheet(formattedRows);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    });
-
-    XLSX.writeFile(wb, `ManifestExport_${shipmentNumber}.xlsx`);
-    XLSX.writeFile(wbBarcode, `Barcodes_${shipmentNumber}.xlsx`);
-
-    // log it 
-    await supaClient.export("deliveries")
-
-    return true
-  } catch (error) {
-    console.error("Excel Export Error:", error.message);
-    return false
-  }
-};
-
-export const updateShipment = async ({
-  id = null,
-  shipment_number,
-  container_number,
-  qty,
-  qtyUpd = true
-}) => {
-
-  if (!qtyUpd) {
-    return supaClient.update(
-      "shipments",
-      { shipment_number: id },
-      { shipment_number,  container_number },
-      "*",
-      true
-    );
-
-  }
-  const { data: shipment, error } = await supaClient.select(
-    "shipments",
-    "*",
-    { shipment_number, container_number },
-    true
-  );
-  
-  if (error || !shipment) return { error };
-
-  const updatedTotal = shipment.total_boxes + qty;
-
-  return supaClient.update(
-    "shipments",
-    { shipment_id: shipment.shipment_id },
-    { total_boxes: updatedTotal },
-    "*",
-    true
-  );
-};
-
-export const insertDeliveryBoxes = async (boxes) => {
-  return supaClient.insert("delivery_boxes", boxes);
-};
-
-export const updateDeliveryBoxes = async (boxes) => {
-  
-}

@@ -25,6 +25,27 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  useEffect(() => {    
+    if (!session) return;
+
+    const interval = setInterval(async () => {
+      const sessionToken = Cookies.get(auth.sessionCookieName);
+      if (!sessionToken) return;
+
+      const { session: validSession, user } =
+        await auth.validateSessionToken(sessionToken);
+
+      if (!validSession) {        
+        logout();
+      } else {
+        // optional: update session if renewed
+        setSession(validSession);
+      }
+    }, 2000); // check every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [session]);
+
   const login = async (userData) => {
     const token = auth.generateSessionToken();
     const session = await auth.createSession(token, userData.id);
@@ -69,7 +90,7 @@ export const AuthProvider = ({ children }) => {
     const cuser = getUser()
     if (!cuser?.access) return false;
     const access = cuser.access
-    
+
     const pagePermissions = access.permissions?.[page];
     if (!pagePermissions) return false;
     return !!pagePermissions[action];

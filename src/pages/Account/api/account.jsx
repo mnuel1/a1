@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { supabase, supaClient } from "../supabaseClient";
+import { supabase, supaClient } from "../../../supabaseClient";
 
 export const updateLoginID = async (loginID, id) => {
   try {

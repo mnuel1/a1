@@ -1,5 +1,5 @@
-import { supabase } from '../supabaseClient';
-import { DISPLAYFLAG } from '../utils/bitwiseflags';
+import { supabase } from '../../../supabaseClient';
+import { DISPLAYFLAG } from '../../../utils/bitwiseflags';
 
 export const hasDisplayFlag = (display, flag) => (display & flag) === flag;
 
@@ -65,6 +65,14 @@ export const getSettings = async (onChange) => {
   }
 };
 
+export const updateSettings = async ({ id, updates }) => {
+  const { error } = await supabase
+    .from("settings")
+    .update(updates)
+    .eq("id", id);
+
+  if (error) throw error;
+};
 
 export const getAccessPresets = async () => {
   try {
@@ -76,3 +84,15 @@ export const getAccessPresets = async () => {
     return null;
   }
 }
+
+export const updateAccessPreset = async ({ id, updates }) => {
+  const { data, error } = await supabase
+    .from("access_level_presets")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+};
