@@ -106,14 +106,14 @@ export const processSheet = async (
     const firstRow = excelData[0];
     const shipmentNo = overrides.shipmentNo || firstRow["SHIPMENT NO."] || "";
     const containerNo = overrides.containerNo || firstRow["CONTAINER NO."] || "";
+    
+    const totalBoxes = excelData.reduce((sum, row) => {
+      const value = parseFloat(
+        String(row["NO. OF BOXES"] || "0").replace(/,/g, "")
+      );
 
-    const totalRow = excelData.find(
-      (row) =>
-        row["DESTINATION"] &&
-        String(row["DESTINATION"]).toUpperCase().includes("TOTAL")
-    );
-
-    const totalBoxes = totalRow ? totalRow["NO. OF BOXES"] || "" : "";
+      return sum + (isNaN(value) ? 0 : value);
+    }, 0);
 
     const manifestData = excelData.filter((row) => {
       const nonEmptyValues = Object.values(row).filter(
