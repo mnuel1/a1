@@ -25,26 +25,26 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  useEffect(() => {    
-    if (!session) return;
+  // useEffect(() => {    
+  //   if (!session) return;
 
-    const interval = setInterval(async () => {
-      const sessionToken = Cookies.get(auth.sessionCookieName);
-      if (!sessionToken) return;
+  //   const interval = setInterval(async () => {
+  //     const sessionToken = Cookies.get(auth.sessionCookieName);
+  //     if (!sessionToken) return;
 
-      const { session: validSession, user } =
-        await auth.validateSessionToken(sessionToken);
+  //     const { session: validSession, user } =
+  //       await auth.validateSessionToken(sessionToken);
 
-      if (!validSession) {        
-        logout();
-      } else {
-        // optional: update session if renewed
-        setSession(validSession);
-      }
-    }, 2000); // check every 2 seconds
+  //     if (!validSession) {        
+  //       logout();
+  //     } else {
+  //       // optional: update session if renewed
+  //       setSession(validSession);
+  //     }
+  //   }, 2000); // check every 2 seconds
 
-    return () => clearInterval(interval);
-  }, [session]);
+  //   return () => clearInterval(interval);
+  // }, [session]);
 
   const login = async (userData) => {
     const token = auth.generateSessionToken();

@@ -98,7 +98,6 @@ export const processSheet = async (
 ) => {
   try {
     const excelData = await readSheet(file, selectedSheet);
-
     if (!excelData || excelData.length === 0) {
       throw new Error("Excel sheet is empty.");
     }

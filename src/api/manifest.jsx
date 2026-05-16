@@ -56,6 +56,7 @@ export const uploadManifest = async (manifestData) => {
       };
     });
 
+    console.log(deliveryRows)
     const { data: insertedDeliveries, error: insertErr } = await supaClient.insert("deliveries", deliveryRows, "*");
     if (insertErr) throw insertErr;
 
